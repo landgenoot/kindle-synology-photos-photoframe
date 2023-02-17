@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path"
 	"reflect"
 	"testing"
 )
@@ -16,17 +18,13 @@ type countingServer struct {
 
 func mockServer(code int, body string, headers map[string]string, requestHeaders map[string][]string) *countingServer {
 	server := &countingServer{}
-
 	server.s = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 		server.successful++
-
 		if !hasRequestHeaders(requestHeaders, r.Header) {
 			server.failed = append(server.failed, r.URL.RawQuery)
 			http.Error(w, "{}", 999)
 			return
 		}
-
 		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 		for key, element := range headers {
 			w.Header().Set(key, element)
@@ -151,5 +149,17 @@ func TestFetchSynoAlbum(t *testing.T) {
 	ids, err := fetchSynoAlbum(server.s.URL, &cookie)
 	if !reflect.DeepEqual(ids, want) || err != nil {
 		t.Fatalf(`fetchSynoAlbum() = %v, %v, want match for %#v, nil`, ids, err, want)
+	}
+}
+
+func TestIsCachedPhoto(t *testing.T) {
+	tmpdir := t.TempDir()
+	id := 15052
+	existentFile := path.Join(tmpdir, fmt.Sprintf("%d.png", 15052))
+	_, err := os.Create(existentFile)
+	want := true
+	got := isCached(id, tmpdir)
+	if got != want {
+		t.Fatalf(`isCachedPhoto() = %v, %v, want match for %#v, nil`, got, err, want)
 	}
 }

@@ -7,6 +7,8 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"os"
+	"path"
 	"time"
 )
 
@@ -84,4 +86,9 @@ func getSharingSidCookie(url string) (*http.Cookie, error) {
 	}
 
 	return res.Cookies()[0], getErr
+}
+
+func isCached(id int, cachePath string) bool {
+	_, err := os.Stat(path.Join(cachePath, fmt.Sprintf("%d.png", 15052)))
+	return err == nil
 }
