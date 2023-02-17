@@ -14,17 +14,18 @@ type countingServer struct {
 	failed     []string
 }
 
-func mockServer(code int, body string, headers map[string]string, requestHeaders map[string]string) *countingServer {
+func mockServer(code int, body string, headers map[string]string, requestHeaders map[string][]string) *countingServer {
 	server := &countingServer{}
 
 	server.s = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		if requestHeaders != nil && !reflect.DeepEqual(r.Header, requestHeaders) {
+		server.successful++
+
+		if !hasRequestHeaders(requestHeaders, r.Header) {
 			server.failed = append(server.failed, r.URL.RawQuery)
 			http.Error(w, "{}", 999)
 			return
 		}
-		server.successful++
 
 		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 		for key, element := range headers {
@@ -37,6 +38,17 @@ func mockServer(code int, body string, headers map[string]string, requestHeaders
 	return server
 }
 
+func hasRequestHeaders(want map[string][]string, got map[string][]string) bool {
+	if want != nil {
+		for key, element := range want {
+			if !reflect.DeepEqual(got[key], element) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
 func contains(s []int, e int) bool {
 	for _, a := range s {
 		if a == e {
@@ -45,16 +57,6 @@ func contains(s []int, e int) bool {
 	}
 	return false
 }
-
-// TestDownloadPhoto(t *testing.T) {
-// 	var a Source
-// 	f, err := a.readOneFile()
-// 	if err != nil {
-// 	   t.Errorf("incorrect")
-// 	} else {
-// 		fmt.Println("passed")
-// 	}
-// }
 
 func TestGetRandomPhoto(t *testing.T) {
 	ids := []int{15052, 10401}
@@ -140,7 +142,10 @@ func TestFetchSynoAlbum(t *testing.T) {
 		Path:  "/",
 		Raw:   "sharing_sid=_xxxxxxxxxx_xxxxxxxxxxxxxxx_xxxx; path=/",
 	}
-	server := mockServer(200, response, nil, nil)
+	requestHeaders := map[string][]string{
+		"Cookie": {"sharing_sid=_xxxxxxxxxx_xxxxxxxxxxxxxxx_xxxx"},
+	}
+	server := mockServer(200, response, nil, requestHeaders)
 	defer server.s.Close()
 	want := []int{15052, 10401}
 	ids, err := fetchSynoAlbum(server.s.URL, &cookie)
