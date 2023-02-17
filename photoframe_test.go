@@ -1,0 +1,150 @@
+package main
+
+import (
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"reflect"
+	"testing"
+)
+
+type countingServer struct {
+	s          *httptest.Server
+	successful int
+	failed     []string
+}
+
+func mockServer(code int, body string, headers map[string]string, requestHeaders map[string]string) *countingServer {
+	server := &countingServer{}
+
+	server.s = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		if requestHeaders != nil && !reflect.DeepEqual(r.Header, requestHeaders) {
+			server.failed = append(server.failed, r.URL.RawQuery)
+			http.Error(w, "{}", 999)
+			return
+		}
+		server.successful++
+
+		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+		for key, element := range headers {
+			w.Header().Set(key, element)
+		}
+		w.WriteHeader(code)
+		fmt.Fprintln(w, body)
+	}))
+
+	return server
+}
+
+func contains(s []int, e int) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
+}
+
+// TestDownloadPhoto(t *testing.T) {
+// 	var a Source
+// 	f, err := a.readOneFile()
+// 	if err != nil {
+// 	   t.Errorf("incorrect")
+// 	} else {
+// 		fmt.Println("passed")
+// 	}
+// }
+
+func TestGetRandomPhoto(t *testing.T) {
+	ids := []int{15052, 10401}
+	photo, err := getRandomPhotoId(ids)
+	if !contains(ids, photo) || err != nil {
+		t.Fatalf(`getPhoto() = %q, %v, want match for %#q, nil`, photo, err, ids)
+	}
+}
+
+func TestGetSharingSidCookie(t *testing.T) {
+	response := "{}"
+	headers := map[string]string{
+		"Set-Cookie": "sharing_sid=_xxxxxxxxxx_xxxxxxxxxxxxxxx_xxxx; path=/",
+	}
+	server := mockServer(200, response, headers, nil)
+	defer server.s.Close()
+	want := http.Cookie{
+		Name:  "sharing_sid",
+		Value: "_xxxxxxxxxx_xxxxxxxxxxxxxxx_xxxx",
+		Path:  "/",
+		Raw:   "sharing_sid=_xxxxxxxxxx_xxxxxxxxxxxxxxx_xxxx; path=/",
+	}
+	cookie, err := getSharingSidCookie(server.s.URL)
+
+	if !reflect.DeepEqual(*cookie, want) || err != nil {
+		t.Fatalf(`fetchSynoAlbum() = %v, %v, want match for %#v, nil`, *cookie, err, want)
+	}
+
+}
+
+func TestFetchSynoAlbum(t *testing.T) {
+	response := `{
+		"success":true,
+		"data":{
+			"list":[
+				{
+					"id":15052,
+					"filename":"20160824_195115.jpg",
+					"filesize":8393648,
+					"time":1472068275,
+					"indexed_time":1625238601571,
+					"owner_user_id":2,
+					"folder_id":1309,
+					"type":"photo",
+					"additional":{
+						"resolution":{"width":2592, "height":1944},
+						"orientation":1,
+						"orientation_original":1,
+						"thumbnail":{
+							"m":"ready",
+							"xl":"ready",
+							"preview":"broken",
+							"sm":"ready",
+							"cache_key":"15052_1625238462",
+							"unit_id":15052},
+						"provider_user_id":2}
+				},{
+					"id":10401,
+					"filename":"20160910_164128.jpg",
+					"filesize":9655210,
+					"time":1473525688,
+					"indexed_time":1625237897811,
+					"owner_user_id":2, 
+					"folder_id":1031,
+					"type":"photo",
+					"additional":{
+						"resolution":{"width":4032,"height":3024},
+						"orientation":1,
+						"orientation_original":1,
+						"thumbnail":{
+							"m":"ready",
+							"xl":"ready",
+							"preview":"broken",
+							"sm":"ready",
+							"cache_key":"10401_1625238153",
+							"unit_id":10401},
+						"provider_user_id":2}
+				}]}}`
+
+	cookie := http.Cookie{
+		Name:  "sharing_sid",
+		Value: "_xxxxxxxxxx_xxxxxxxxxxxxxxx_xxxx",
+		Path:  "/",
+		Raw:   "sharing_sid=_xxxxxxxxxx_xxxxxxxxxxxxxxx_xxxx; path=/",
+	}
+	server := mockServer(200, response, nil, nil)
+	defer server.s.Close()
+	want := []int{15052, 10401}
+	ids, err := fetchSynoAlbum(server.s.URL, &cookie)
+	if !reflect.DeepEqual(ids, want) || err != nil {
+		t.Fatalf(`fetchSynoAlbum() = %v, %v, want match for %#v, nil`, ids, err, want)
+	}
+}
