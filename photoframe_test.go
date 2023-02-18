@@ -16,7 +16,7 @@ type countingServer struct {
 	failed     []string
 }
 
-func mockServer(code int, body string, headers map[string]string, requestHeaders map[string][]string) *countingServer {
+func mockServer(code int, body string, headers map[string]string, requestHeaders map[string][]string, requestBody string) *countingServer {
 	server := &countingServer{}
 	server.s = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		server.successful++
@@ -69,7 +69,7 @@ func TestGetSharingSidCookie(t *testing.T) {
 	headers := map[string]string{
 		"Set-Cookie": "sharing_sid=_xxxxxxxxxx_xxxxxxxxxxxxxxx_xxxx; path=/",
 	}
-	server := mockServer(200, response, headers, nil)
+	server := mockServer(200, response, headers, nil, "")
 	defer server.s.Close()
 	want := http.Cookie{
 		Name:  "sharing_sid",
@@ -82,7 +82,6 @@ func TestGetSharingSidCookie(t *testing.T) {
 	if !reflect.DeepEqual(*cookie, want) || err != nil {
 		t.Fatalf(`fetchSynoAlbum() = %v, %v, want match for %#v, nil`, *cookie, err, want)
 	}
-
 }
 
 func TestFetchSynoAlbum(t *testing.T) {
@@ -141,18 +140,20 @@ func TestFetchSynoAlbum(t *testing.T) {
 		Raw:   "sharing_sid=_xxxxxxxxxx_xxxxxxxxxxxxxxx_xxxx; path=/",
 	}
 	requestHeaders := map[string][]string{
-		"Cookie": {"sharing_sid=_xxxxxxxxxx_xxxxxxxxxxxxxxx_xxxx"},
+		"Cookie":         {"sharing_sid=_xxxxxxxxxx_xxxxxxxxxxxxxxx_xxxx"},
+		"X-Syno-Sharing": {"k5SnJvlVW"},
 	}
-	server := mockServer(200, response, nil, requestHeaders)
+	albumCode := "k5SnJvlVW"
+	server := mockServer(200, response, nil, requestHeaders, "")
 	defer server.s.Close()
 	want := []int{15052, 10401}
-	ids, err := fetchSynoAlbum(server.s.URL, &cookie)
+	ids, err := fetchSynoAlbum(server.s.URL, &cookie, albumCode)
 	if !reflect.DeepEqual(ids, want) || err != nil {
 		t.Fatalf(`fetchSynoAlbum() = %v, %v, want match for %#v, nil`, ids, err, want)
 	}
 }
 
-func TestIsCachedPhoto(t *testing.T) {
+func TestCachedPhoto(t *testing.T) {
 	tmpdir := t.TempDir()
 	id := 15052
 	existentFile := path.Join(tmpdir, fmt.Sprintf("%d.png", 15052))
@@ -160,6 +161,34 @@ func TestIsCachedPhoto(t *testing.T) {
 	want := true
 	got := isCached(id, tmpdir)
 	if got != want {
-		t.Fatalf(`isCachedPhoto() = %v, %v, want match for %#v, nil`, got, err, want)
+		t.Fatalf(`isCached() = %v, %v, want match for %#v, nil`, got, err, want)
 	}
 }
+
+func TestNotCachedPhoto(t *testing.T) {
+	tmpdir := t.TempDir()
+	id := 99999
+	existentFile := path.Join(tmpdir, fmt.Sprintf("%d.png", 15052))
+	_, err := os.Create(existentFile)
+	want := false
+	got := isCached(id, tmpdir)
+	if got != want {
+		t.Fatalf(`isCached() = %v, %v, want match for %#v, nil`, got, err, want)
+	}
+}
+
+// func TestDownloadPhoto(t *testing.T) {
+// 	tmpdir := t.TempDir()
+// 	id := 15052
+// 	albumCode := "k5SnJvlVW"
+// 	requestBody := `cache_key="35336_1628372812"&type="unit"&size="xl"&passphrase="k5SnJvlVW"&api="SYNO.Foto.Thumbnail"&method="get"&version=1&_sharing_id="k5SnJvlVW"`
+// 	cookie := http.Cookie{
+// 		Name:  "sharing_sid",
+// 		Value: "_xxxxxxxxxx_xxxxxxxxxxxxxxx_xxxx",
+// 		Path:  "/",
+// 		Raw:   "sharing_sid=_xxxxxxxxxx_xxxxxxxxxxxxxxx_xxxx; path=/",
+// 	}
+// 	server := mockServer(200, "{}", nil, nil, requestBody)
+// 	// defer server.s.Close()
+// 	file, err := downloadPhoto(server.s.URL, albumCode, id, tmpdir, &cookie)
+// }
