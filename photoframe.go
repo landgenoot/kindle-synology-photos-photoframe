@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"strings"
 	"time"
 )
 
@@ -29,29 +30,33 @@ type Photo struct {
 	Id int `jsoFotoBrowseItemn:"id"`
 }
 
-func fetchSynoAlbum(url string, cookie *http.Cookie) ([]int, error) {
-	synoClient := http.Client{}
+func fetchSynoAlbum(url string, cookie *http.Cookie, albumCode string) ([]int, error) {
+	method := "POST"
 
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	payload := strings.NewReader(`offset=0&limit=1000&api="SYNO.Foto.Browse.Item"&method="list"&version=1`)
 
-	req.AddCookie(cookie)
+	client := &http.Client{}
+	req, err := http.NewRequest(method, url, payload)
 
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err)
+		return nil, err
 	}
+	req.Header.Add("x-syno-sharing", albumCode)
+	req.Header.Add("Content-Type", "text/plain")
+	req.AddCookie(cookie)
 
-	res, getErr := synoClient.Do(req)
-	if getErr != nil {
-		log.Fatal(getErr)
+	res, err := client.Do(req)
+	if err != nil {
+		fmt.Println(err)
+		return nil, err
 	}
+	defer res.Body.Close()
 
-	if res.Body != nil {
-		defer res.Body.Close()
-	}
-
-	body, readErr := ioutil.ReadAll(res.Body)
-	if readErr != nil {
-		log.Fatal(readErr)
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		fmt.Println(err)
+		return nil, err
 	}
 
 	album := synoFotoBrowseItem{}
@@ -89,6 +94,25 @@ func getSharingSidCookie(url string) (*http.Cookie, error) {
 }
 
 func isCached(id int, cachePath string) bool {
-	_, err := os.Stat(path.Join(cachePath, fmt.Sprintf("%d.png", 15052)))
+	_, err := os.Stat(path.Join(cachePath, fmt.Sprintf("%d.png", id)))
 	return err == nil
 }
+
+// func downloadPhoto(baseUrl string, albumCode string, id int, cachePath string, cookie *http.Cookie) (os.File, error) {
+// 	synoClient := http.Client{}
+
+// 	req, err := http.NewRequest(http.MethodPost, baseUrl, nil)
+
+// 	req.AddCookie(cookie)
+// 	req.Body
+// 	if err != nil {
+// 		log.Fatal(err)
+// 	}
+
+// 	res, getErr := synoClient.Do(req)
+// 	if getErr != nil {
+// 		log.Fatal(getErr)
+// 	}
+
+// 	return nil, nil
+// }
