@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -21,19 +22,10 @@ func mockServer(code int, body string, headers map[string]string, requestHeaders
 	server := &countingServer{}
 	server.s = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		server.successful++
-		if !hasRequestHeaders(requestHeaders, r.Header) {
+		if !hasRequestHeaders(requestHeaders, r.Header) && !hasRequestBody(requestBody, r.Body) {
 			server.failed = append(server.failed, r.URL.RawQuery)
 			http.Error(w, "{}", 999)
 			return
-		}
-		if requestBody != "" && r.Body != nil {
-			var bodyBytes []byte
-			bodyBytes, _ = ioutil.ReadAll(r.Body)
-			if string(bodyBytes) != requestBody {
-				server.failed = append(server.failed, r.URL.RawQuery)
-				http.Error(w, "{}", 999)
-				return
-			}
 		}
 		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 		for key, element := range headers {
@@ -44,6 +36,17 @@ func mockServer(code int, body string, headers map[string]string, requestHeaders
 	}))
 
 	return server
+}
+
+func hasRequestBody(want string, got io.ReadCloser) bool {
+	if want != "" && got != nil {
+		var bodyBytes []byte
+		bodyBytes, _ = ioutil.ReadAll(got)
+		if string(bodyBytes) != want {
+			return false
+		}
+	}
+	return true
 }
 
 func hasRequestHeaders(want map[string][]string, got map[string][]string) bool {
