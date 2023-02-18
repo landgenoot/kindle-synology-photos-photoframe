@@ -98,6 +98,10 @@ func isCached(id int, cachePath string) bool {
 	return err == nil
 }
 
+func downloadPhoto(baseUrl string, albumCode string, id int, cachePath string, cookie *http.Cookie) error {
+	return nil
+}
+
 // func downloadPhoto(baseUrl string, albumCode string, id int, cachePath string, cookie *http.Cookie) (os.File, error) {
 // 	synoClient := http.Client{}
 

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -24,6 +25,15 @@ func mockServer(code int, body string, headers map[string]string, requestHeaders
 			server.failed = append(server.failed, r.URL.RawQuery)
 			http.Error(w, "{}", 999)
 			return
+		}
+		if requestBody != "" && r.Body != nil {
+			var bodyBytes []byte
+			bodyBytes, _ = ioutil.ReadAll(r.Body)
+			if string(bodyBytes) != requestBody {
+				server.failed = append(server.failed, r.URL.RawQuery)
+				http.Error(w, "{}", 999)
+				return
+			}
 		}
 		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 		for key, element := range headers {
@@ -144,7 +154,7 @@ func TestFetchSynoAlbum(t *testing.T) {
 		"X-Syno-Sharing": {"k5SnJvlVW"},
 	}
 	albumCode := "k5SnJvlVW"
-	server := mockServer(200, response, nil, requestHeaders, "")
+	server := mockServer(200, response, nil, requestHeaders, `offset=0&limit=1000&api="SYNO.Foto.Browse.Item"&method="list"&version=1`)
 	defer server.s.Close()
 	want := []int{15052, 10401}
 	ids, err := fetchSynoAlbum(server.s.URL, &cookie, albumCode)
@@ -178,7 +188,6 @@ func TestNotCachedPhoto(t *testing.T) {
 }
 
 // func TestDownloadPhoto(t *testing.T) {
-// 	tmpdir := t.TempDir()
 // 	id := 15052
 // 	albumCode := "k5SnJvlVW"
 // 	requestBody := `cache_key="35336_1628372812"&type="unit"&size="xl"&passphrase="k5SnJvlVW"&api="SYNO.Foto.Thumbnail"&method="get"&version=1&_sharing_id="k5SnJvlVW"`
@@ -188,7 +197,8 @@ func TestNotCachedPhoto(t *testing.T) {
 // 		Path:  "/",
 // 		Raw:   "sharing_sid=_xxxxxxxxxx_xxxxxxxxxxxxxxx_xxxx; path=/",
 // 	}
+// 	tmpdir := t.TempDir()
 // 	server := mockServer(200, "{}", nil, nil, requestBody)
 // 	// defer server.s.Close()
-// 	file, err := downloadPhoto(server.s.URL, albumCode, id, tmpdir, &cookie)
+// 	downloadPhoto(server.s.URL, albumCode, id, tmpdir, &cookie)
 // }
