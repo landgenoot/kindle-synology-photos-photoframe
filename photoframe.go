@@ -1,10 +1,8 @@
 package main
 
 import (
-	"encoding/json"
+	"errors"
 	"fmt"
-	"io/ioutil"
-	"log"
 	"math/rand"
 	"net/http"
 	"os"
@@ -14,60 +12,21 @@ import (
 
 func main() {
 	fmt.Println("Hello, World!")
+
+	shareLink := "https://b92.dsmdemo.synologydemo.com:5001/mo/sharing/k5SnJvlVW"
+	baseUrl, albumCode := parseShareLink(shareLink)
+	cookie, _ := getSharingSidCookie(shareLink)
+	album, _ := fetchSynoAlbum(baseUrl, cookie, albumCode)
+	fmt.Println(album)
 }
 
-type synoFotoBrowseItem struct {
-	Success bool `json:"success"`
-	Data    Data `json:"data"`
-}
-
-type Data struct {
-	List []Photo `json:"list"`
-}
-
-type Photo struct {
-	Id int `jsoFotoBrowseItemn:"id"`
-}
-
-func fetchSynoAlbum(url string, cookie *http.Cookie, albumCode string) ([]int, error) {
-	method := "POST"
-	payload := `offset=0&limit=1000&api="SYNO.Foto.Browse.Item"&method="list"&version=1`
-	req, err := getSynoRequest(method, url, payload, cookie, albumCode)
-	if err != nil {
-		fmt.Println(err)
-		return nil, err
+func getRandomPhoto(album synoFotoBrowseItem) (Photo, error) {
+	if len(album.Data.List) < 1 {
+		return Photo{}, errors.New("No photos in album")
 	}
-
-	client := &http.Client{}
-	res, err := client.Do(req)
-	if err != nil {
-		fmt.Println(err)
-		return nil, err
-	}
-	defer res.Body.Close()
-
-	body, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		fmt.Println(err)
-		return nil, err
-	}
-
-	album := synoFotoBrowseItem{}
-	jsonErr := json.Unmarshal(body, &album)
-	if jsonErr != nil {
-		log.Fatal(jsonErr)
-	}
-	ids := make([]int, len(album.Data.List))
-
-	for i := 0; i < len(ids); i++ {
-		ids[i] = album.Data.List[i].Id
-	}
-	return ids, jsonErr
-}
-
-func getRandomPhotoId(ids []int) (int, error) {
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	return ids[r.Intn(len(ids))], nil
+	randomIndex := r.Intn(len(album.Data.List))
+	return album.Data.List[randomIndex], nil
 }
 
 func isCached(id int, cachePath string) bool {

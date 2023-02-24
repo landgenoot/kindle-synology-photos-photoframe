@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
 )
 
@@ -46,4 +47,12 @@ func parseSynoPhotoBrowseItem(response io.Reader) (synoFotoBrowseItem, error) {
 	album := synoFotoBrowseItem{}
 	err = json.Unmarshal(body, &album)
 	return album, err
+}
+
+func parseShareLink(shareLink string) (string, string) {
+	shareLinkUrl, _ := url.Parse(shareLink)
+	path := strings.Split(shareLinkUrl.Path, "/")
+	shareLinkUrl.Path = strings.Join(path[1:3], "/")
+	albumCode := path[3]
+	return shareLinkUrl.String(), albumCode
 }

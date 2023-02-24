@@ -76,3 +76,13 @@ func TestParseSynoPhotoBrowseItem(t *testing.T) {
 		t.Fatalf(`parseSynoPhotoBrowseItem() = %v, %v, want match for %#v, nil`, got, err, want)
 	}
 }
+
+func TestParseShareLink(t *testing.T) {
+	shareLink := "https://b92.dsmdemo.synologydemo.com:5001/mo/sharing/k5SnJvlVW"
+	wantBaseUrl := "https://b92.dsmdemo.synologydemo.com:5001/mo/sharing"
+	wantAlbumCode := "k5SnJvlVW"
+	gotBaseUrl, gotAlbumCode := parseShareLink(shareLink)
+	if gotBaseUrl != wantBaseUrl || gotAlbumCode != wantAlbumCode {
+		t.Fatalf(`parseShareLink() = %v, %v, want match for %#v,  %#v`, gotBaseUrl, gotAlbumCode, wantBaseUrl, wantAlbumCode)
+	}
+}
