@@ -77,26 +77,6 @@ func TestGetRandomPhoto(t *testing.T) {
 	}
 }
 
-func TestGetSharingSidCookie(t *testing.T) {
-	response := "{}"
-	headers := map[string]string{
-		"Set-Cookie": "sharing_sid=_xxxxxxxxxx_xxxxxxxxxxxxxxx_xxxx; path=/",
-	}
-	server := mockServer(200, response, headers, nil, "")
-	defer server.s.Close()
-	want := http.Cookie{
-		Name:  "sharing_sid",
-		Value: "_xxxxxxxxxx_xxxxxxxxxxxxxxx_xxxx",
-		Path:  "/",
-		Raw:   "sharing_sid=_xxxxxxxxxx_xxxxxxxxxxxxxxx_xxxx; path=/",
-	}
-	cookie, err := getSharingSidCookie(server.s.URL)
-
-	if !reflect.DeepEqual(*cookie, want) || err != nil {
-		t.Fatalf(`fetchSynoAlbum() = %v, %v, want match for %#v, nil`, *cookie, err, want)
-	}
-}
-
 func TestFetchSynoAlbum(t *testing.T) {
 	response := `{
 		"success":true,

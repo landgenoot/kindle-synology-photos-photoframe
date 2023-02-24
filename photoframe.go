@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"path"
-	"strings"
 	"time"
 )
 
@@ -32,20 +31,14 @@ type Photo struct {
 
 func fetchSynoAlbum(url string, cookie *http.Cookie, albumCode string) ([]int, error) {
 	method := "POST"
-
-	payload := strings.NewReader(`offset=0&limit=1000&api="SYNO.Foto.Browse.Item"&method="list"&version=1`)
-
-	client := &http.Client{}
-	req, err := http.NewRequest(method, url, payload)
-
+	payload := `offset=0&limit=1000&api="SYNO.Foto.Browse.Item"&method="list"&version=1`
+	req, err := getSynoRequest(method, url, payload, cookie, albumCode)
 	if err != nil {
 		fmt.Println(err)
 		return nil, err
 	}
-	req.Header.Add("x-syno-sharing", albumCode)
-	req.Header.Add("Content-Type", "text/plain")
-	req.AddCookie(cookie)
 
+	client := &http.Client{}
 	res, err := client.Do(req)
 	if err != nil {
 		fmt.Println(err)
@@ -75,22 +68,6 @@ func fetchSynoAlbum(url string, cookie *http.Cookie, albumCode string) ([]int, e
 func getRandomPhotoId(ids []int) (int, error) {
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	return ids[r.Intn(len(ids))], nil
-}
-
-func getSharingSidCookie(url string) (*http.Cookie, error) {
-	synoClient := http.Client{}
-
-	req, err := http.NewRequest(http.MethodGet, url, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	res, getErr := synoClient.Do(req)
-	if getErr != nil {
-		log.Fatal(getErr)
-	}
-
-	return res.Cookies()[0], getErr
 }
 
 func isCached(id int, cachePath string) bool {
