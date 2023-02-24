@@ -11,6 +11,19 @@ import (
 	"strings"
 )
 
+type synoFotoBrowseItem struct {
+	Success bool `json:"success"`
+	Data    Data `json:"data"`
+}
+
+type Data struct {
+	List []Photo `json:"list"`
+}
+
+type Photo struct {
+	Id int `jsoFotoBrowseItemn:"id"`
+}
+
 func getSharingSidCookie(url string) (*http.Cookie, error) {
 	synoClient := http.Client{}
 
@@ -55,4 +68,25 @@ func parseShareLink(shareLink string) (string, string) {
 	shareLinkUrl.Path = strings.Join(path[1:3], "/")
 	albumCode := path[3]
 	return shareLinkUrl.String(), albumCode
+}
+
+func fetchSynoAlbum(url string, cookie *http.Cookie, albumCode string) (synoFotoBrowseItem, error) {
+	url = fmt.Sprintf(`%v/webapi/entry.cgi?`, url)
+	method := "POST"
+	payload := `offset=0&limit=1000&api="SYNO.Foto.Browse.Item"&method="list"&version=1`
+	req, err := getSynoRequest(method, url, payload, cookie, albumCode)
+	if err != nil {
+		fmt.Println(err)
+		return synoFotoBrowseItem{}, err
+	}
+
+	client := &http.Client{}
+	res, err := client.Do(req)
+	if err != nil {
+		fmt.Println(err)
+		return synoFotoBrowseItem{}, err
+	}
+	defer res.Body.Close()
+	album, jsonErr := parseSynoPhotoBrowseItem(res.Body)
+	return album, jsonErr
 }
