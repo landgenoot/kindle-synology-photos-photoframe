@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io"
 	"math/rand"
 	"net/http"
 	"os"
@@ -34,6 +35,19 @@ func isCached(id int, cachePath string) bool {
 	return err == nil
 }
 
-func downloadPhoto(baseUrl string, albumCode string, id int, cachePath string, cookie *http.Cookie) error {
-	return nil
+func downloadPhoto(req http.Request, name string) error {
+	client := &http.Client{}
+	res, err := client.Do(&req)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+
+	out, err := os.Create(name)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+	_, err = io.Copy(out, res.Body)
+	return err
 }

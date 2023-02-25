@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -183,18 +184,15 @@ func TestNotCachedPhoto(t *testing.T) {
 	}
 }
 
-// func TestDownloadPhoto(t *testing.T) {
-// 	id := 15052
-// 	albumCode := "k5SnJvlVW"
-// 	requestBody := `cache_key="35336_1628372812"&type="unit"&size="xl"&passphrase="k5SnJvlVW"&api="SYNO.Foto.Thumbnail"&method="get"&version=1&_sharing_id="k5SnJvlVW"`
-// 	cookie := http.Cookie{
-// 		Name:  "sharing_sid",
-// 		Value: "_xxxxxxxxxx_xxxxxxxxxxxxxxx_xxxx",
-// 		Path:  "/",
-// 		Raw:   "sharing_sid=_xxxxxxxxxx_xxxxxxxxxxxxxxx_xxxx; path=/",
-// 	}
-// 	tmpdir := t.TempDir()
-// 	server := mockServer(200, "{}", nil, nil, requestBody)
-// 	// defer server.s.Close()
-// 	downloadPhoto(server.s.URL, albumCode, id, tmpdir, &cookie)
-// }
+func TestDownloadPhoto(t *testing.T) {
+	tmpdir := t.TempDir()
+	name := path.Join(tmpdir, fmt.Sprintf("%d.png", 1337))
+	server := mockServer(200, "{}", nil, nil, "")
+	defer server.s.Close()
+	req, _ := http.NewRequest("GET", server.s.URL, strings.NewReader(""))
+	downloadErr := downloadPhoto(*req, name)
+	_, err := os.Stat(path.Join(tmpdir, fmt.Sprintf("%d.png", 1337)))
+	if err != nil || downloadErr != nil {
+		t.Fatalf(`downloadPhoto() = %v, %v`, downloadErr, err)
+	}
+}

@@ -37,9 +37,6 @@ func getSharingSidCookie(url string) (*http.Cookie, error) {
 	return res.Cookies()[0], getErr
 }
 
-// getSynoAlbumRequest(baseUrl string, cookie *http.Cookie, albumCode string)
-// getSynoPhotoRequest(baseUrl string, cookie *http.Cookie, id int)
-
 func getSynoAlbumRequest(baseUrl string, cookie *http.Cookie, albumCode string) (*http.Request, error) {
 	requestUrl := fmt.Sprintf(`%v/webapi/entry.cgi?`, baseUrl)
 	method := "POST"
