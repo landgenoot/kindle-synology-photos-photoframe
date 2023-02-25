@@ -41,6 +41,7 @@ func TestGetSynoAlbumRequest(t *testing.T) {
 		"Cookie":         {"sharing_sid=_xxxxxxxxxx_xxxxxxxxxxxxxxx_xxxx"},
 		"X-Syno-Sharing": {"k5SnJvlVW"},
 	}
+	wantUrl := "https://www.example.com/webapi/entry.cgi?"
 	wantMethod := "POST"
 	wantPayload := `offset=0&limit=1000&api="SYNO.Foto.Browse.Item"&method="list"&version=1`
 
@@ -50,13 +51,53 @@ func TestGetSynoAlbumRequest(t *testing.T) {
 	gotPayload := buf.String()
 
 	if !hasRequestHeaders(wantHeader, got.Header) {
-		t.Fatalf(`getSynoRequest() = %v, %v, want match for %#v, nil`, got.Header, err, wantHeader)
+		t.Fatalf(`getSynoAlbumRequest() = %v, %v, want match for %#v, nil`, got.Header, err, wantHeader)
+	}
+	if wantUrl != got.URL.String() {
+		t.Fatalf(`getSynoAlbumRequest().Method = %v, %v, want match for %#v, nil`, got.Method, err, wantMethod)
 	}
 	if wantMethod != got.Method {
-		t.Fatalf(`getSynoRequest().Method = %v, %v, want match for %#v, nil`, got.Method, err, wantMethod)
+		t.Fatalf(`getSynoAlbumRequest().Method = %v, %v, want match for %#v, nil`, got.Method, err, wantMethod)
 	}
 	if wantPayload != gotPayload {
-		t.Fatalf(`getSynoRequest().Body = %v, %v, want match for %#v, nil`, gotPayload, err, wantPayload)
+		t.Fatalf(`getSynoAlbumRequest().Body = %v, %v, want match for %#v, nil`, gotPayload, err, wantPayload)
+	}
+}
+
+func TestGetSynoPhotoRequest(t *testing.T) {
+	baseUrl := "https://www.example.com"
+	albumCode := "k5SnJvlVW"
+	id := 15052
+	cookie := http.Cookie{
+		Name:  "sharing_sid",
+		Value: "_xxxxxxxxxx_xxxxxxxxxxxxxxx_xxxx",
+		Path:  "/",
+		Raw:   "sharing_sid=_xxxxxxxxxx_xxxxxxxxxxxxxxx_xxxx; path=/",
+	}
+	wantHeader := map[string][]string{
+		"Cookie":         {"sharing_sid=_xxxxxxxxxx_xxxxxxxxxxxxxxx_xxxx"},
+		"X-Syno-Sharing": {"k5SnJvlVW"},
+	}
+	wantUrl := "https://www.example.com/webapi/entry.cgi/20210807_144336.jpg"
+	wantMethod := "GET"
+	wantPayload := `id=15052&cache_key="35336_1628372812"&type="unit"&size="xl"&passphrase="k5SnJvlVW"&api="SYNO.Foto.Thumbnail"&method="get"&version=1&_sharing_id="k5SnJvlVW"`
+
+	got, err := getSynoPhotoRequest(baseUrl, &cookie, albumCode, id)
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(got.Body)
+	gotPayload := buf.String()
+
+	if !hasRequestHeaders(wantHeader, got.Header) {
+		t.Fatalf(`getSynoPhotoRequest() = %v, %v, want match for %#v, nil`, got.Header, err, wantHeader)
+	}
+	if wantUrl != got.URL.String() {
+		t.Fatalf(`getSynoAlbumRequest().Method = %v, %v, want match for %#v, nil`, got.Method, err, wantMethod)
+	}
+	if wantMethod != got.Method {
+		t.Fatalf(`getSynoPhotoRequest().Method = %v, %v, want match for %#v, nil`, got.Method, err, wantMethod)
+	}
+	if wantPayload != gotPayload {
+		t.Fatalf(`getSynoPhotoRequest().Body = %v, %v, want match for %#v, nil`, gotPayload, err, wantPayload)
 	}
 }
 

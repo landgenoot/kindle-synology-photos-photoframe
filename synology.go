@@ -26,17 +26,14 @@ type Photo struct {
 
 func getSharingSidCookie(url string) (*http.Cookie, error) {
 	synoClient := http.Client{}
-
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	res, getErr := synoClient.Do(req)
 	if getErr != nil {
 		log.Fatal(getErr)
 	}
-
 	return res.Cookies()[0], getErr
 }
 
@@ -47,6 +44,20 @@ func getSynoAlbumRequest(baseUrl string, cookie *http.Cookie, albumCode string) 
 	requestUrl := fmt.Sprintf(`%v/webapi/entry.cgi?`, baseUrl)
 	method := "POST"
 	payload := `offset=0&limit=1000&api="SYNO.Foto.Browse.Item"&method="list"&version=1`
+	req, err := http.NewRequest(method, requestUrl, strings.NewReader(payload))
+	if err != nil {
+		fmt.Println(err)
+		return nil, err
+	}
+	req.Header.Add("x-syno-sharing", albumCode)
+	req.AddCookie(cookie)
+	return req, nil
+}
+
+func getSynoPhotoRequest(baseUrl string, cookie *http.Cookie, albumCode string, id int) (*http.Request, error) {
+	requestUrl := fmt.Sprintf(`%v/webapi/entry.cgi/20210807_144336.jpg`, baseUrl)
+	method := "GET"
+	payload := fmt.Sprintf(`id=%v&cache_key="35336_1628372812"&type="unit"&size="xl"&passphrase="%[2]v"&api="SYNO.Foto.Thumbnail"&method="get"&version=1&_sharing_id="%[2]v"`, id, albumCode)
 	req, err := http.NewRequest(method, requestUrl, strings.NewReader(payload))
 	if err != nil {
 		fmt.Println(err)
