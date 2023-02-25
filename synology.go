@@ -40,8 +40,14 @@ func getSharingSidCookie(url string) (*http.Cookie, error) {
 	return res.Cookies()[0], getErr
 }
 
-func getSynoRequest(method string, url string, payload string, cookie *http.Cookie, albumCode string) (*http.Request, error) {
-	req, err := http.NewRequest(method, url, strings.NewReader(payload))
+// getSynoAlbumRequest(baseUrl string, cookie *http.Cookie, albumCode string)
+// getSynoPhotoRequest(baseUrl string, cookie *http.Cookie, id int)
+
+func getSynoAlbumRequest(baseUrl string, cookie *http.Cookie, albumCode string) (*http.Request, error) {
+	requestUrl := fmt.Sprintf(`%v/webapi/entry.cgi?`, baseUrl)
+	method := "POST"
+	payload := `offset=0&limit=1000&api="SYNO.Foto.Browse.Item"&method="list"&version=1`
+	req, err := http.NewRequest(method, requestUrl, strings.NewReader(payload))
 	if err != nil {
 		fmt.Println(err)
 		return nil, err
@@ -70,11 +76,8 @@ func parseShareLink(shareLink string) (string, string) {
 	return shareLinkUrl.String(), albumCode
 }
 
-func fetchSynoAlbum(url string, cookie *http.Cookie, albumCode string) (synoFotoBrowseItem, error) {
-	url = fmt.Sprintf(`%v/webapi/entry.cgi?`, url)
-	method := "POST"
-	payload := `offset=0&limit=1000&api="SYNO.Foto.Browse.Item"&method="list"&version=1`
-	req, err := getSynoRequest(method, url, payload, cookie, albumCode)
+func fetchSynoAlbum(baseUrl string, cookie *http.Cookie, albumCode string) (synoFotoBrowseItem, error) {
+	req, err := getSynoAlbumRequest(baseUrl, cookie, albumCode)
 	if err != nil {
 		fmt.Println(err)
 		return synoFotoBrowseItem{}, err

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"net/http"
 	"reflect"
 	"strings"
@@ -27,10 +28,8 @@ func TestGetSharingSidCookie(t *testing.T) {
 	}
 }
 
-func TestGetSynoRequest(t *testing.T) {
-	method := "POST"
-	url := "https://www.example.com"
-	payload := "a=1&b=2"
+func TestGetSynoAlbumRequest(t *testing.T) {
+	baseUrl := "https://www.example.com"
 	albumCode := "k5SnJvlVW"
 	cookie := http.Cookie{
 		Name:  "sharing_sid",
@@ -38,13 +37,26 @@ func TestGetSynoRequest(t *testing.T) {
 		Path:  "/",
 		Raw:   "sharing_sid=_xxxxxxxxxx_xxxxxxxxxxxxxxx_xxxx; path=/",
 	}
-	want := map[string][]string{
+	wantHeader := map[string][]string{
 		"Cookie":         {"sharing_sid=_xxxxxxxxxx_xxxxxxxxxxxxxxx_xxxx"},
 		"X-Syno-Sharing": {"k5SnJvlVW"},
 	}
-	got, err := getSynoRequest(method, url, payload, &cookie, albumCode)
-	if !hasRequestHeaders(want, got.Header) {
-		t.Fatalf(`getSynoRequest() = %v, %v, want match for %#v, nil`, got.Header, err, want)
+	wantMethod := "POST"
+	wantPayload := `offset=0&limit=1000&api="SYNO.Foto.Browse.Item"&method="list"&version=1`
+
+	got, err := getSynoAlbumRequest(baseUrl, &cookie, albumCode)
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(got.Body)
+	gotPayload := buf.String()
+
+	if !hasRequestHeaders(wantHeader, got.Header) {
+		t.Fatalf(`getSynoRequest() = %v, %v, want match for %#v, nil`, got.Header, err, wantHeader)
+	}
+	if wantMethod != got.Method {
+		t.Fatalf(`getSynoRequest().Method = %v, %v, want match for %#v, nil`, got.Method, err, wantMethod)
+	}
+	if wantPayload != gotPayload {
+		t.Fatalf(`getSynoRequest().Body = %v, %v, want match for %#v, nil`, gotPayload, err, wantPayload)
 	}
 }
 
@@ -86,3 +98,12 @@ func TestParseShareLink(t *testing.T) {
 		t.Fatalf(`parseShareLink() = %v, %v, want match for %#v,  %#v`, gotBaseUrl, gotAlbumCode, wantBaseUrl, wantAlbumCode)
 	}
 }
+
+// func TestDownloadPhoto(t *testing.T) {
+// 	request := http.Request{
+
+// 	}
+// 	body := downloadPhoto(req, )
+// }
+
+// func test

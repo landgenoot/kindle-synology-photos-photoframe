@@ -37,22 +37,3 @@ func isCached(id int, cachePath string) bool {
 func downloadPhoto(baseUrl string, albumCode string, id int, cachePath string, cookie *http.Cookie) error {
 	return nil
 }
-
-// func downloadPhoto(baseUrl string, albumCode string, id int, cachePath string, cookie *http.Cookie) (os.File, error) {
-// 	synoClient := http.Client{}
-
-// 	req, err := http.NewRequest(http.MethodPost, baseUrl, nil)
-
-// 	req.AddCookie(cookie)
-// 	req.Body
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-
-// 	res, getErr := synoClient.Do(req)
-// 	if getErr != nil {
-// 		log.Fatal(getErr)
-// 	}
-
-// 	return nil, nil
-// }
