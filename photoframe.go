@@ -14,11 +14,15 @@ import (
 func main() {
 	fmt.Println("Hello, World!")
 
-	shareLink := "https://b92.dsmdemo.synologydemo.com:5001/mo/sharing/k5SnJvlVW"
+	shareLink := "http://192.168.50.57:5000/mo/sharing/RMVJ3g6t8"
 	baseUrl, albumCode := parseShareLink(shareLink)
 	cookie, _ := getSharingSidCookie(shareLink)
 	album, _ := fetchSynoAlbum(baseUrl, cookie, albumCode)
-	fmt.Println(album)
+	randomPhoto, _ := getRandomPhoto(album)
+	photoRequest, _ := getSynoPhotoRequest(baseUrl, cookie, albumCode, randomPhoto.Id)
+	fmt.Println(photoRequest.URL.String())
+	fmt.Println(cookie)
+	downloadPhoto(*photoRequest, "test.png")
 }
 
 func getRandomPhoto(album synoFotoBrowseItem) (Photo, error) {

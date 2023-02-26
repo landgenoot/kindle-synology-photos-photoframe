@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 )
 
@@ -52,15 +53,30 @@ func getSynoAlbumRequest(baseUrl string, cookie *http.Cookie, albumCode string) 
 }
 
 func getSynoPhotoRequest(baseUrl string, cookie *http.Cookie, albumCode string, id int) (*http.Request, error) {
-	requestUrl := fmt.Sprintf(`%v/webapi/entry.cgi/20210807_144336.jpg`, baseUrl)
+	requestUrl := fmt.Sprintf(`%v/webapi/entry.cgi/20210807_144336.jpg?`, baseUrl)
 	method := "GET"
-	payload := fmt.Sprintf(`id=%v&cache_key="35336_1628372812"&type="unit"&size="xl"&passphrase="%[2]v"&api="SYNO.Foto.Thumbnail"&method="get"&version=1&_sharing_id="%[2]v"`, id, albumCode)
-	req, err := http.NewRequest(method, requestUrl, strings.NewReader(payload))
+
+	u, err := url.Parse(requestUrl)
+	if err != nil {
+		log.Fatal(err)
+	}
+	q := u.Query()
+	q.Set("id", strconv.Itoa(id))
+	q.Set("cache_key", "35336_1628372812")
+	q.Set("type", "unit")
+	q.Set("size", "xl")
+	q.Set("passphrase", albumCode)
+	q.Set("api", "SYNO.Foto.Thumbnail")
+	q.Set("method", "get")
+	q.Set("version", "1")
+	q.Set("_sharing_id", albumCode)
+	u.RawQuery = q.Encode()
+
+	req, err := http.NewRequest(method, u.String(), nil)
 	if err != nil {
 		fmt.Println(err)
 		return nil, err
 	}
-	req.Header.Add("x-syno-sharing", albumCode)
 	req.AddCookie(cookie)
 	return req, nil
 }

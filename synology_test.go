@@ -75,29 +75,21 @@ func TestGetSynoPhotoRequest(t *testing.T) {
 		Raw:   "sharing_sid=_xxxxxxxxxx_xxxxxxxxxxxxxxx_xxxx; path=/",
 	}
 	wantHeader := map[string][]string{
-		"Cookie":         {"sharing_sid=_xxxxxxxxxx_xxxxxxxxxxxxxxx_xxxx"},
-		"X-Syno-Sharing": {"k5SnJvlVW"},
+		"Cookie": {"sharing_sid=_xxxxxxxxxx_xxxxxxxxxxxxxxx_xxxx"},
 	}
-	wantUrl := "https://www.example.com/webapi/entry.cgi/20210807_144336.jpg"
+	wantUrl := `https://www.example.com/webapi/entry.cgi/20210807_144336.jpg?_sharing_id=k5SnJvlVW&api=SYNO.Foto.Thumbnail&cache_key=35336_1628372812&id=15052&method=get&passphrase=k5SnJvlVW&size=xl&type=unit&version=1`
 	wantMethod := "GET"
-	wantPayload := `id=15052&cache_key="35336_1628372812"&type="unit"&size="xl"&passphrase="k5SnJvlVW"&api="SYNO.Foto.Thumbnail"&method="get"&version=1&_sharing_id="k5SnJvlVW"`
 
 	got, err := getSynoPhotoRequest(baseUrl, &cookie, albumCode, id)
-	buf := new(bytes.Buffer)
-	buf.ReadFrom(got.Body)
-	gotPayload := buf.String()
 
 	if !hasRequestHeaders(wantHeader, got.Header) {
 		t.Fatalf(`getSynoPhotoRequest() = %v, %v, want match for %#v, nil`, got.Header, err, wantHeader)
 	}
 	if wantUrl != got.URL.String() {
-		t.Fatalf(`getSynoAlbumRequest().Method = %v, %v, want match for %#v, nil`, got.Method, err, wantMethod)
+		t.Fatalf(`getSynoAlbumRequest().Method = %v, %v, want match for %#v, nil`, got.URL.String(), err, wantUrl)
 	}
 	if wantMethod != got.Method {
 		t.Fatalf(`getSynoPhotoRequest().Method = %v, %v, want match for %#v, nil`, got.Method, err, wantMethod)
-	}
-	if wantPayload != gotPayload {
-		t.Fatalf(`getSynoPhotoRequest().Body = %v, %v, want match for %#v, nil`, gotPayload, err, wantPayload)
 	}
 }
 
