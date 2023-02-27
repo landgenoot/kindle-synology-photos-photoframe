@@ -27,9 +27,8 @@ jobs:
                     CGO_LDFLAGS="-Wl,-rpath=/mnt/us/linkss/lib" CC="arm-linux-gnueabi-gcc -fopenmp" PKG_CONFIG_LIBDIR=/usr/lib/arm-linux-gnueabi/pkgconfig GOOS=linux GOARCH=arm CGO_ENABLED=1 go build -o photoframe 
                     ls
 
-          
-          - name: Upload binary
+          - name: Upload release
             uses: actions/upload-artifact@v3
             with:
-              name: kindle-synology-photos-photoframe-${{GITHUB_REF}}
+              name: kindle-synology-photos-photoframe-$GITHUB_REF
               path: photoframe          
