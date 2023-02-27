@@ -16,6 +16,9 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
+    - name: Build the Docker image
+      run: docker build . --file Dockerfile --tag kindle-compile-toolchain:$(date +%s)
+
     - name: Set up Go
       uses: actions/setup-go@v3
       with:
