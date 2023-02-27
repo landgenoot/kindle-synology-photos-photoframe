@@ -27,7 +27,7 @@ jobs:
         run: cd /github/workflow && ls
 
       - name: Test3
-        run: cd /github/home && ls
+        run: cd /__w/kindle-synology-photos-photoframe/kindle-synology-photos-photoframe && ls
 
       - name: Build
         run: cd /github/workspace && CGO_LDFLAGS="-Wl,-rpath=/mnt/us/linkss/lib" CC="arm-linux-gnueabi-gcc -fopenmp" PKG_CONFIG_LIBDIR=/usr/lib/arm-linux-gnueabi/pkgconfig GOOS=linux GOARCH=arm CGO_ENABLED=1  go build -o test
