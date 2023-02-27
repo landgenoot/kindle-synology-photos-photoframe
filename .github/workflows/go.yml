@@ -25,7 +25,7 @@ jobs:
         run: ls
 
       - name: Test2
-        run: cd /github/workflow && ls
+        run: cd /workdir && ls
 
       - name: Test3
         run: cd ${{ github.workspace }} && ls
