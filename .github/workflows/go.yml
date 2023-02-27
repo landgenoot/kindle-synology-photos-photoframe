@@ -21,7 +21,7 @@ jobs:
         run: (ls /.dockerenv && echo Found dockerenv) || (echo No dockerenv)
       
       - name: Test
-        run: pwd
+        run: ls
 
       - name: Test2
         run: cd /github/workflow && ls
