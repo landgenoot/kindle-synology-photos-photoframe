@@ -15,6 +15,7 @@ jobs:
     container:
       image: landgenoot/kindle-cross-compile-toolchain:latest
       options: --cpus 1
+      volumes: ${{ github.workspace }}/workdir
 
     steps:
       - name: Check for dockerenv file
