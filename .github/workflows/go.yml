@@ -10,18 +10,16 @@ on:
     branches: [ "main" ]
 
 jobs:
-  container-test-job:
-    runs-on: ubuntu-latest
-    container:
-      image: landgenoot/kindle-cross-compile-toolchain:latest
-      options: --cpus 1
-      volumes: 
-        - ${{ github.workspace }}/workdir
-
-    steps:
-      - name: Check for dockerenv file
-        run: (ls /.dockerenv && echo Found dockerenv) || (echo No dockerenv)
-      
-      - name: Build
-        run: cd /github/home && CGO_LDFLAGS="-Wl,-rpath=/mnt/us/linkss/lib" CC="arm-linux-gnueabi-gcc -fopenmp" PKG_CONFIG_LIBDIR=/usr/lib/arm-linux-gnueabi/pkgconfig GOOS=linux GOARCH=arm CGO_ENABLED=1  go build -o test
-
+    compile:
+        name: Compile site assets
+        runs-on: ubuntu-latest
+        steps:
+          - name: Check out the repo
+            uses: actions/checkout@v2
+          - name: Run the build process with Docker
+            uses: addnab/docker-run-action@v3
+            with:
+                image: landgenoot/kindle-cross-compile-toolchain:latest
+                options: -v ${{ github.workspace }}:/workdir
+                run: |
+                    CGO_LDFLAGS="-Wl,-rpath=/mnt/us/linkss/lib" CC="arm-linux-gnueabi-gcc -fopenmp" PKG_CONFIG_LIBDIR=/usr/lib/arm-linux-gnueabi/pkgconfig GOOS=linux GOARCH=arm CGO_ENABLED=1  go build -o test                
