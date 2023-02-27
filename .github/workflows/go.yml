@@ -21,6 +21,9 @@ jobs:
     steps:
       - name: Check for dockerenv file
         run: (ls /.dockerenv && echo Found dockerenv) || (echo No dockerenv)
+      
+      - name: Test
+        run: ls
 
       - name: Build
         run: CGO_LDFLAGS="-Wl,-rpath=/mnt/us/linkss/lib" CC="arm-linux-gnueabi-gcc -fopenmp" PKG_CONFIG_LIBDIR=/usr/lib/arm-linux-gnueabi/pkgconfig GOOS=linux GOARCH=arm CGO_ENABLED=1  go build -o test
