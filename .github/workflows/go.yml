@@ -16,9 +16,9 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-
     - name: Build the Docker image
       run: docker build . --file Dockerfile --tag kindle-compile-toolchain:$(date +%s)
+
 
     - name: Set up Go
       uses: actions/setup-go@v3
@@ -27,3 +27,4 @@ jobs:
 
     - name: Build
       run: docker exec -it $(docker ps --latest --quiet) CGO_LDFLAGS="-Wl,-rpath=/mnt/us/linkss/lib" CC="arm-linux-gnueabi-gcc -fopenmp" PKG_CONFIG_LIBDIR=/usr/lib/arm-linux-gnueabi/pkgconfig GOOS=linux GOARCH=arm CGO_ENABLED=1  go build -o test
+
