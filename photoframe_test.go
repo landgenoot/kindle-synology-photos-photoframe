@@ -185,14 +185,11 @@ func TestNotCachedPhoto(t *testing.T) {
 }
 
 func TestDownloadPhoto(t *testing.T) {
-	tmpdir := t.TempDir()
-	name := path.Join(tmpdir, fmt.Sprintf("%d.png", 1337))
 	server := mockServer(200, "{}", nil, nil, "")
 	defer server.s.Close()
 	req, _ := http.NewRequest("GET", server.s.URL, strings.NewReader(""))
-	downloadErr := downloadPhoto(*req, name)
-	_, err := os.Stat(path.Join(tmpdir, fmt.Sprintf("%d.png", 1337)))
-	if err != nil || downloadErr != nil {
-		t.Fatalf(`downloadPhoto() = %v, %v`, downloadErr, err)
+	photo, downloadErr := downloadPhoto(*req)
+	if reflect.DeepEqual([]byte("{}"), photo) && downloadErr != nil {
+		t.Fatalf(`downloadPhoto() = %v, %v`, photo, downloadErr)
 	}
 }

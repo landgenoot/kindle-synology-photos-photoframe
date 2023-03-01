@@ -8,14 +8,21 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io"
-	"math"
+	"io/ioutil"
+	"log"
 	"math/rand"
 	"net/http"
 	"os"
+	"os/exec"
 	"path"
 	"time"
+	"unsafe"
+
+	_ "embed"
 )
+
+//go:embed bin/kindle_colors.gif
+var kindle_colors []byte
 
 var (
 	inputFile  = flag.String("in", "test.png", "The file to read in")
@@ -34,37 +41,47 @@ func main() {
 	photoRequest, _ := getSynoPhotoRequest(baseUrl, cookie, albumCode, randomPhoto.Id)
 	fmt.Println(photoRequest.URL.String())
 	fmt.Println(cookie)
-	downloadPhoto(*photoRequest, "test.png")
+	buf, _ := downloadPhoto(*photoRequest)
 
 	C.MagickWandGenesis()
 
 	// Create a wand
 	mw := C.NewMagickWand()
 
+	mw2 := C.NewMagickWand()
+
 	defer func() {
 		// Tidy up
 		if mw != nil {
 			C.DestroyMagickWand(mw)
+			C.DestroyMagickWand(mw2)
 		}
 
 		C.MagickWandTerminus()
 	}()
 
-	C.MagickReadImage(mw, C.CString(*inputFile))
+	C.MagickReadImageBlob(mw, unsafe.Pointer(&buf[0]), C.size_t(len(buf)))
+	C.MagickReadImageBlob(mw2, unsafe.Pointer(&kindle_colors[0]), C.size_t(len(kindle_colors)))
+	C.MagickSetImageGravity(mw, C.CenterGravity)
+	mw = C.MagickTransformImage(mw, C.CString("1448x1072+0+0"), C.CString(""))
+	C.MagickTransformImageColorspace(mw, C.GRAYColorspace)
+	C.MagickRemapImage(mw, mw2, C.FloydSteinbergDitherMethod)
+	image := C.GetImageFromMagickWand(mw)
+	C.BrightnessContrastImage(image, 3, 15)
+	C.MagickSetImageCompressionQuality(mw, C.size_t(75))
+	C.SetImageDepth(image, C.size_t(8))
 
-	// Resize it
-	height := float64(C.MagickGetImageHeight(mw))
-	width := float64(C.MagickGetImageWidth(mw))
-
-	newHeight := math.Round(math.Max(height*(*scale), 1))
-	newWidth := math.Round(math.Max(width*(*scale), 1))
-
-	// Resize the image using the Lanczos filter
-	// The blur factor is a "double", where > 1 is blurry, < 1 is sharp
-	C.MagickResizeImage(mw, C.uint(newWidth), C.uint(newHeight), C.LanczosFilter, 1)
-
+	pixelWand := C.NewPixelWand()
+	C.MagickRotateImage(mw, pixelWand, 90)
 	// Write the new image
 	C.MagickWriteImage(mw, C.CString(*outputFile))
+	path, _ := os.Getwd()
+	cmd := exec.Command("/usr/sbin/eips", "-f", "-g", fmt.Sprintf(`%v/test2.png`, path))
+
+	err := cmd.Run()
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func getRandomPhoto(album synoFotoBrowseItem) (Photo, error) {
@@ -81,19 +98,15 @@ func isCached(id int, cachePath string) bool {
 	return err == nil
 }
 
-func downloadPhoto(req http.Request, name string) error {
+func downloadPhoto(req http.Request) ([]byte, error) {
 	client := &http.Client{}
-	res, err := client.Do(&req)
-	if err != nil {
-		return err
-	}
-	defer res.Body.Close()
+	res, _ := client.Do(&req)
+	return ioutil.ReadAll(res.Body)
+}
 
-	out, err := os.Create(name)
-	if err != nil {
-		return err
+func max(x, y float32) float32 {
+	if x > y {
+		return x
 	}
-	defer out.Close()
-	_, err = io.Copy(out, res.Body)
-	return err
+	return y
 }
