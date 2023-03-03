@@ -42,39 +42,7 @@ func main() {
 	fmt.Println(photoRequest.URL.String())
 	fmt.Println(cookie)
 	buf, _ := downloadPhoto(*photoRequest)
-
-	C.MagickWandGenesis()
-
-	// Create a wand
-	mw := C.NewMagickWand()
-
-	mw2 := C.NewMagickWand()
-
-	defer func() {
-		// Tidy up
-		if mw != nil {
-			C.DestroyMagickWand(mw)
-			C.DestroyMagickWand(mw2)
-		}
-
-		C.MagickWandTerminus()
-	}()
-
-	C.MagickReadImageBlob(mw, unsafe.Pointer(&buf[0]), C.size_t(len(buf)))
-	C.MagickReadImageBlob(mw2, unsafe.Pointer(&kindle_colors[0]), C.size_t(len(kindle_colors)))
-	C.MagickSetImageGravity(mw, C.CenterGravity)
-	mw = C.MagickTransformImage(mw, C.CString("1448x1072+0+0"), C.CString(""))
-	C.MagickTransformImageColorspace(mw, C.GRAYColorspace)
-	C.MagickRemapImage(mw, mw2, C.FloydSteinbergDitherMethod)
-	image := C.GetImageFromMagickWand(mw)
-	C.BrightnessContrastImage(image, 3, 15)
-	C.MagickSetImageCompressionQuality(mw, C.size_t(75))
-	C.SetImageDepth(image, C.size_t(8))
-
-	pixelWand := C.NewPixelWand()
-	C.MagickRotateImage(mw, pixelWand, 90)
-	// Write the new image
-	C.MagickWriteImage(mw, C.CString(*outputFile))
+	convertPhoto(buf, "a.jpeg")
 	path, _ := os.Getwd()
 	cmd := exec.Command("/usr/sbin/eips", "-f", "-g", fmt.Sprintf(`%v/test2.png`, path))
 
@@ -82,6 +50,47 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func convertPhoto(photo []byte, filename string) {
+	C.MagickWandGenesis()
+
+	// Create a wand
+	mwPhoto := C.NewMagickWand()
+	mwKindleColors := C.NewMagickWand()
+	pixelWand := C.NewPixelWand()
+
+	// Tidy up wands after function run
+	defer func() {
+		if mwPhoto != nil {
+			C.DestroyMagickWand(mwPhoto)
+			C.DestroyMagickWand(mwKindleColors)
+			C.DestroyPixelWand(pixelWand)
+		}
+		C.MagickWandTerminus()
+	}()
+
+	// Read photo and Kindle Colors reference file
+	C.MagickReadImageBlob(mwPhoto, unsafe.Pointer(&photo[0]), C.size_t(len(photo)))
+	C.MagickReadImageBlob(mwKindleColors, unsafe.Pointer(&kindle_colors[0]), C.size_t(len(kindle_colors)))
+
+	// Crop and resize, rotate
+	C.MagickSetImageGravity(mwPhoto, C.CenterGravity)
+	mwPhoto = C.MagickTransformImage(mwPhoto, C.CString("1448x1072+0+0"), C.CString(""))
+	C.MagickRotateImage(mwPhoto, pixelWand, 90)
+
+	// Convert to grayscale and apply dithering
+	C.MagickTransformImageColorspace(mwPhoto, C.GRAYColorspace)
+	C.MagickRemapImage(mwPhoto, mwKindleColors, C.FloydSteinbergDitherMethod)
+	C.MagickSetImageCompressionQuality(mwPhoto, C.size_t(75))
+
+	// Adjust brightness and color depth
+	image := C.GetImageFromMagickWand(mwPhoto)
+	C.BrightnessContrastImage(image, 3, 15)
+	C.SetImageDepth(image, C.size_t(8))
+
+	// Write the new image
+	C.MagickWriteImage(mwPhoto, C.CString(*&filename))
 }
 
 func getRandomPhoto(album synoFotoBrowseItem) (Photo, error) {
