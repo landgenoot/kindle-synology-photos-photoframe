@@ -4,7 +4,7 @@ All processing happens on the device, just share an album in Synology Photos and
 
 Read the corresponding blog post [here](https://daanmiddendorp.com/tech/2022/02/14/new-destination-for-my-broken-kindle)
 
-![Photo frame](https://i.imgur.com/qbGQfbO.png)
+![Photo frame](https://daanmiddendorp.com/assets/responsive-images/895/20220214_151832.jpg)
 Tested on a Kindle Voyage. But should also work on other jailbroken Kindles.
 
 
