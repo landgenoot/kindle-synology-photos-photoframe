@@ -6,49 +6,48 @@ import "C"
 
 import (
 	"errors"
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"math/rand"
+	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path"
+	"runtime"
 	"time"
 	"unsafe"
 
 	_ "embed"
 )
 
-//go:embed bin/kindle_colors.gif
+//go:embed assets/kindle_colors.gif
 var kindle_colors []byte
 
-var (
-	inputFile  = flag.String("in", "test.png", "The file to read in")
-	outputFile = flag.String("out", "test2.png", "The file to write out")
-	scale      = flag.Float64("scale", 0.5, "how much to scale the image by")
-)
-
 func main() {
-	fmt.Println("Hello, World!")
-
-	shareLink := "http://192.168.50.57:5000/mo/sharing/RMVJ3g6t8"
-	baseUrl, albumCode := parseShareLink(shareLink)
+	log.Println("Starting photoframe...")
+	shareLink, _ := url.Parse("http://192.168.50.57:5000/mo/sharing/RMVJ3g6t8")
 	cookie, _ := getSharingSidCookie(shareLink)
-	album, _ := fetchSynoAlbum(baseUrl, cookie, albumCode)
-	randomPhoto, _ := getRandomPhoto(album)
-	photoRequest, _ := getSynoPhotoRequest(baseUrl, cookie, albumCode, randomPhoto.Id)
-	fmt.Println(photoRequest.URL.String())
-	fmt.Println(cookie)
-	buf, _ := downloadPhoto(*photoRequest)
-	convertPhoto(buf, "a.jpeg")
-	path, _ := os.Getwd()
-	cmd := exec.Command("/usr/sbin/eips", "-f", "-g", fmt.Sprintf(`%v/test2.png`, path))
+	baseUrl, albumCode := parseShareLink(shareLink)
 
-	err := cmd.Run()
-	if err != nil {
-		log.Fatal(err)
+	// Loop that keeps the service active
+	for true {
+		connectionErr := waitForWifi(shareLink.Hostname(), shareLink.Port())
+		if connectionErr != nil {
+			log.Printf("Could not connect to server, connectionError = %v", connectionErr)
+		} else {
+			album, _ := fetchSynoAlbum(baseUrl, cookie, albumCode)
+			randomPhoto, _ := getRandomPhoto(album)
+			photoRequest, _ := getSynoPhotoRequest(baseUrl, cookie, albumCode, randomPhoto.Id)
+			photo, _ := downloadPhoto(*photoRequest)
+			convertPhoto(photo, "/tmp/photoframe.jpeg")
+			drawToScreen("/tmp/photoframe.jpeg")
+			log.Printf("Converting and drawing photo %d", randomPhoto.Id)
+		}
+		sleepDuration := nextWakeup(time.Now(), 6, 0)
+		suspendToRam(sleepDuration)
 	}
 }
 
@@ -118,4 +117,62 @@ func max(x, y float32) float32 {
 		return x
 	}
 	return y
+}
+
+func nextWakeup(now time.Time, hour int, minutes int) int {
+	yyyy, mm, dd := now.Date()
+	// Jump to tomorrow, if wakeup time has already passed.
+	if now.Hour() > hour || now.Hour() == hour && now.Minute() >= minutes {
+		dd++
+	}
+	tomorrow := time.Date(yyyy, mm, dd, hour, minutes, 0, 0, now.Location())
+	return int(tomorrow.Sub(now).Seconds())
+}
+
+func drawToScreen(image string) {
+	if runtime.GOARCH != "arm" {
+		return // Skip if not on Kindle
+	}
+	cmd := exec.Command("/usr/sbin/eips", "-f", "-g", image)
+	err := cmd.Run()
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func suspendToRam(duration int) {
+	if runtime.GOARCH != "arm" {
+		return // Skip if not on Kindle
+	}
+	cmd1 := exec.Command("sh", "-c", "echo \"\" > /sys/class/rtc/rtc1/wakealarm")
+	err1 := cmd1.Run()
+	if err1 != nil {
+		log.Fatal(err1)
+	}
+	cmd2 := exec.Command("sh", "-c", fmt.Sprintf("echo \"+%d\" > /sys/class/rtc/rtc1/wakealarm", duration))
+	err2 := cmd2.Run()
+	if err2 != nil {
+		log.Fatal(err2)
+	}
+
+	// Check if we are waken up manually, give us time to abort the process
+	if duration < 3600*24-60 {
+		log.Println("Waiting 30 seconds before going back to sleep")
+		time.Sleep(30 * time.Second)
+	}
+
+	log.Println("Going to sleep")
+
+	cmd3 := exec.Command("sh", "-c", "echo \"mem\" > /sys/power/state")
+	err3 := cmd3.Run()
+	if err3 != nil {
+		log.Fatal(err3)
+	}
+}
+
+func waitForWifi(hostname string, port string) error {
+	seconds := 30
+	timeOut := time.Duration(seconds) * time.Second
+	_, err := net.DialTimeout("tcp", hostname+":"+port, timeOut)
+	return err
 }

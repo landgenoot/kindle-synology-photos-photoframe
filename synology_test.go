@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"net/http"
+	"net/url"
 	"reflect"
 	"strings"
 	"testing"
@@ -21,7 +22,8 @@ func TestGetSharingSidCookie(t *testing.T) {
 		Path:  "/",
 		Raw:   "sharing_sid=_xxxxxxxxxx_xxxxxxxxxxxxxxx_xxxx; path=/",
 	}
-	cookie, err := getSharingSidCookie(server.s.URL)
+	mockUrl, _ := url.Parse(server.s.URL)
+	cookie, err := getSharingSidCookie(mockUrl)
 
 	if !reflect.DeepEqual(*cookie, want) || err != nil {
 		t.Fatalf(`fetchSynoAlbum() = %v, %v, want match for %#v, nil`, *cookie, err, want)
@@ -123,7 +125,7 @@ func TestParseSynoPhotoBrowseItem(t *testing.T) {
 }
 
 func TestParseShareLink(t *testing.T) {
-	shareLink := "https://b92.dsmdemo.synologydemo.com:5001/mo/sharing/k5SnJvlVW"
+	shareLink, _ := url.Parse("https://b92.dsmdemo.synologydemo.com:5001/mo/sharing/k5SnJvlVW")
 	wantBaseUrl := "https://b92.dsmdemo.synologydemo.com:5001/mo/sharing"
 	wantAlbumCode := "k5SnJvlVW"
 	gotBaseUrl, gotAlbumCode := parseShareLink(shareLink)
@@ -131,12 +133,3 @@ func TestParseShareLink(t *testing.T) {
 		t.Fatalf(`parseShareLink() = %v, %v, want match for %#v,  %#v`, gotBaseUrl, gotAlbumCode, wantBaseUrl, wantAlbumCode)
 	}
 }
-
-// func TestDownloadPhoto(t *testing.T) {
-// 	request := http.Request{
-
-// 	}
-// 	body := downloadPhoto(req, )
-// }
-
-// func test

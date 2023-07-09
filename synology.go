@@ -25,9 +25,9 @@ type Photo struct {
 	Id int `jsoFotoBrowseItemn:"id"`
 }
 
-func getSharingSidCookie(url string) (*http.Cookie, error) {
+func getSharingSidCookie(url *url.URL) (*http.Cookie, error) {
 	synoClient := http.Client{}
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	req, err := http.NewRequest(http.MethodGet, url.String(), nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -92,12 +92,11 @@ func parseSynoPhotoBrowseItem(response io.Reader) (synoFotoBrowseItem, error) {
 	return album, err
 }
 
-func parseShareLink(shareLink string) (string, string) {
-	shareLinkUrl, _ := url.Parse(shareLink)
-	path := strings.Split(shareLinkUrl.Path, "/")
-	shareLinkUrl.Path = strings.Join(path[1:3], "/")
+func parseShareLink(shareLink *url.URL) (string, string) {
+	path := strings.Split(shareLink.Path, "/")
+	shareLink.Path = strings.Join(path[1:3], "/")
 	albumCode := path[3]
-	return shareLinkUrl.String(), albumCode
+	return shareLink.String(), albumCode
 }
 
 func fetchSynoAlbum(baseUrl string, cookie *http.Cookie, albumCode string) (synoFotoBrowseItem, error) {

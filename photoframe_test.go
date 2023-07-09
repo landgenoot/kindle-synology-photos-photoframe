@@ -11,6 +11,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 )
 
 type countingServer struct {
@@ -191,5 +192,23 @@ func TestDownloadPhoto(t *testing.T) {
 	photo, downloadErr := downloadPhoto(*req)
 	if reflect.DeepEqual([]byte("{}"), photo) && downloadErr != nil {
 		t.Fatalf(`downloadPhoto() = %v, %v`, photo, downloadErr)
+	}
+}
+
+func TestNextWakeupToday(t *testing.T) {
+	now := time.Date(2009, time.November, 5, 5, 0, 0, 0, time.UTC)
+	want := 3600
+	got := nextWakeup(now, 6, 0)
+	if got != want {
+		t.Fatalf(`nextWakeup() = %v, want match for %#v, nil`, got, want)
+	}
+}
+
+func TestNextWakeupTomorrow(t *testing.T) {
+	now := time.Date(2009, time.November, 5, 7, 0, 0, 0, time.UTC)
+	want := 82800
+	got := nextWakeup(now, 6, 0)
+	if got != want {
+		t.Fatalf(`nextWakeup() = %v, want match for %#v, nil`, got, want)
 	}
 }
