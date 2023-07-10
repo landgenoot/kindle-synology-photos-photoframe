@@ -30,11 +30,12 @@ var cookie *http.Cookie
 var baseUrl string
 var albumCode string
 
+// Usage: ./photoframe http://192.168.50.57:5000/mo/sharing/RMVJ3g6t8
 func main() {
-	log.Println("Initialising photoframe...")
-	shareLink, _ = url.Parse("http://192.168.50.57:5000/mo/sharing/RMVJ3g6t8")
+	shareLink, _ = url.Parse(os.Args[1])
 	cookie, _ = getSharingSidCookie(shareLink)
 	baseUrl, albumCode = parseShareLink(shareLink)
+	log.Printf("Initialising album %v on %v", albumCode, shareLink.Hostname())
 	for true {
 		updatePhoto()
 		seconds := nextWakeup(time.Now(), 6, 0)
@@ -43,7 +44,6 @@ func main() {
 }
 
 func updatePhoto() {
-	log.Println("Refreshing photo")
 	connectionErr := waitForWifi(shareLink.Hostname(), shareLink.Port())
 	if connectionErr != nil {
 		log.Printf("Could not connect to server, connectionError = %v", connectionErr)
@@ -55,6 +55,7 @@ func updatePhoto() {
 	photo, _ := downloadPhoto(*photoRequest)
 	convertPhoto(photo, "/tmp/photoframe.jpeg")
 	drawToScreen("/tmp/photoframe.jpeg")
+	log.Printf("Updating to photo %v", randomPhoto.Id)
 }
 
 func convertPhoto(photo []byte, filename string) {
@@ -129,9 +130,8 @@ func max(x, y float32) float32 {
 // time in 24H format. E.g. 6, 30 means 6:30 AM.
 func nextWakeup(now time.Time, hour int, minutes int) int {
 	yyyy, mm, dd := now.Date()
-	// Jump to tomorrow, if wakeup time has already passed.
 	if now.Hour() > hour || now.Hour() == hour && now.Minute() >= minutes {
-		dd++
+		dd++ // Jump to tomorrow, if wakeup time has already passed.
 	}
 	tomorrow := time.Date(yyyy, mm, dd, hour, minutes, 0, 0, now.Location())
 	return int(tomorrow.Sub(now).Seconds())
@@ -150,7 +150,8 @@ func drawToScreen(imagePath string) {
 
 // Suspend device and use real time clock alarm to wake it up.
 // If our wake up time is more or less 24 hours away, we can put it to
-// sleep immediately. Otherwise, we will wait another 30 seconds.
+// sleep immediately. Otherwise, we will wait another 30 seconds, which enables us
+// to abort the process.
 func suspendToRam(duration int) {
 	if runtime.GOARCH != "arm" {
 		return // Skip if not on Kindle
@@ -172,7 +173,7 @@ func suspendToRam(duration int) {
 		time.Sleep(30 * time.Second)
 	}
 
-	log.Println("Going to sleep")
+	log.Println("Suspending to RAM")
 
 	cmd3 := exec.Command("sh", "-c", "echo \"mem\" > /sys/power/state")
 	err3 := cmd3.Run()
