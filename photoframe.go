@@ -25,30 +25,40 @@ import (
 
 //go:embed assets/kindle_colors.gif
 var kindle_colors []byte
+var shareLink *url.URL
+var cookie *http.Cookie
+var baseUrl string
+var albumCode string
 
 func main() {
-	log.Println("Starting photoframe...")
-	shareLink, _ := url.Parse("http://192.168.50.57:5000/mo/sharing/RMVJ3g6t8")
-	cookie, _ := getSharingSidCookie(shareLink)
-	baseUrl, albumCode := parseShareLink(shareLink)
+	log.Println("Initialising photoframe...")
+	shareLink, _ = url.Parse("http://192.168.50.57:5000/mo/sharing/RMVJ3g6t8")
+	cookie, _ = getSharingSidCookie(shareLink)
+	baseUrl, albumCode = parseShareLink(shareLink)
 
 	// Loop that keeps the service active
 	for true {
-		connectionErr := waitForWifi(shareLink.Hostname(), shareLink.Port())
-		if connectionErr != nil {
-			log.Printf("Could not connect to server, connectionError = %v", connectionErr)
-		} else {
-			album, _ := fetchSynoAlbum(baseUrl, cookie, albumCode)
-			randomPhoto, _ := getRandomPhoto(album)
-			photoRequest, _ := getSynoPhotoRequest(baseUrl, cookie, albumCode, randomPhoto.Id)
-			photo, _ := downloadPhoto(*photoRequest)
-			convertPhoto(photo, "/tmp/photoframe.jpeg")
-			drawToScreen("/tmp/photoframe.jpeg")
-			log.Printf("Converting and drawing photo %d", randomPhoto.Id)
-		}
+		refresh()
 		sleepDuration := nextWakeup(time.Now(), 6, 0)
 		suspendToRam(sleepDuration)
 	}
+}
+
+func refresh() {
+	connectionErr := waitForWifi(shareLink.Hostname(), shareLink.Port())
+	if connectionErr != nil {
+		log.Printf("Could not connect to server, connectionError = %v", connectionErr)
+		return
+	}
+
+	album, _ := fetchSynoAlbum(baseUrl, cookie, albumCode)
+	randomPhoto, _ := getRandomPhoto(album)
+	photoRequest, _ := getSynoPhotoRequest(baseUrl, cookie, albumCode, randomPhoto.Id)
+	photo, _ := downloadPhoto(*photoRequest)
+
+	convertPhoto(photo, "/tmp/photoframe.jpeg")
+	drawToScreen("/tmp/photoframe.jpeg")
+	log.Printf("Converting and drawing photo %d", randomPhoto.Id)
 }
 
 func convertPhoto(photo []byte, filename string) {
@@ -129,11 +139,11 @@ func nextWakeup(now time.Time, hour int, minutes int) int {
 	return int(tomorrow.Sub(now).Seconds())
 }
 
-func drawToScreen(image string) {
+func drawToScreen(imagePath string) {
 	if runtime.GOARCH != "arm" {
 		return // Skip if not on Kindle
 	}
-	cmd := exec.Command("/usr/sbin/eips", "-f", "-g", image)
+	cmd := exec.Command("/usr/sbin/eips", "-f", "-g", imagePath)
 	err := cmd.Run()
 	if err != nil {
 		log.Fatal(err)
