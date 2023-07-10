@@ -1,3 +1,11 @@
+// Kindle Synology Photos Photoframe
+//
+// To start: ./photoframe http://192.168.50.57:5000/mo/sharing/RMVJ3g6t8
+// To stop: killall photoframe
+//
+// URL can be obtained from:
+// Synology Photos -> Pick album -> Sharing
+// Privacy Settings must be "Public - Anyone with the link can view"
 package main
 
 // #cgo pkg-config: MagickWand
@@ -30,7 +38,6 @@ var cookie *http.Cookie
 var baseUrl string
 var albumCode string
 
-// Usage: ./photoframe http://192.168.50.57:5000/mo/sharing/RMVJ3g6t8
 func main() {
 	shareLink, _ = url.Parse(os.Args[1])
 	cookie, _ = getSharingSidCookie(shareLink)
