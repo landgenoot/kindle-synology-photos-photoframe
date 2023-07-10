@@ -94,9 +94,10 @@ func parseSynoPhotoBrowseItem(response io.Reader) (synoFotoBrowseItem, error) {
 
 func parseShareLink(shareLink *url.URL) (string, string) {
 	path := strings.Split(shareLink.Path, "/")
-	shareLink.Path = strings.Join(path[1:3], "/")
+	baseUrl, _ := url.Parse(shareLink.String())
+	baseUrl.Path = strings.Join(path[1:3], "/")
 	albumCode := path[3]
-	return shareLink.String(), albumCode
+	return baseUrl.String(), albumCode
 }
 
 func fetchSynoAlbum(baseUrl string, cookie *http.Cookie, albumCode string) (synoFotoBrowseItem, error) {

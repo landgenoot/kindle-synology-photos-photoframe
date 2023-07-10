@@ -39,15 +39,27 @@ var baseUrl string
 var albumCode string
 
 func main() {
+	logFile := initLogger()
+	defer logFile.Close()
+
 	shareLink, _ = url.Parse(os.Args[1])
-	cookie, _ = getSharingSidCookie(shareLink)
 	baseUrl, albumCode = parseShareLink(shareLink)
 	log.Printf("Initialising album %v on %v", albumCode, shareLink.Hostname())
+
 	for true {
 		updatePhoto()
 		seconds := nextWakeup(time.Now(), 6, 0)
 		suspendToRam(seconds) // Loop will automatically continue after wake up
 	}
+}
+
+func initLogger() *os.File {
+	f, err := os.OpenFile("photoframe.log", os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.SetOutput(f)
+	return f
 }
 
 func updatePhoto() {
@@ -56,6 +68,7 @@ func updatePhoto() {
 		log.Printf("Could not connect to server, connectionError = %v", connectionErr)
 		return
 	}
+	cookie, _ = getSharingSidCookie(shareLink)
 	album, _ := fetchSynoAlbum(baseUrl, cookie, albumCode)
 	randomPhoto, _ := getRandomPhoto(album)
 	photoRequest, _ := getSynoPhotoRequest(baseUrl, cookie, albumCode, randomPhoto.Id)
