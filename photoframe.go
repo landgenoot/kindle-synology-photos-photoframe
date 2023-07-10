@@ -35,30 +35,26 @@ func main() {
 	shareLink, _ = url.Parse("http://192.168.50.57:5000/mo/sharing/RMVJ3g6t8")
 	cookie, _ = getSharingSidCookie(shareLink)
 	baseUrl, albumCode = parseShareLink(shareLink)
-
-	// Loop that keeps the service active
 	for true {
-		refresh()
-		sleepDuration := nextWakeup(time.Now(), 6, 0)
-		suspendToRam(sleepDuration)
+		updatePhoto()
+		seconds := nextWakeup(time.Now(), 6, 0)
+		suspendToRam(seconds) // Loop will automatically continue after wake up
 	}
 }
 
-func refresh() {
+func updatePhoto() {
+	log.Println("Refreshing photo")
 	connectionErr := waitForWifi(shareLink.Hostname(), shareLink.Port())
 	if connectionErr != nil {
 		log.Printf("Could not connect to server, connectionError = %v", connectionErr)
 		return
 	}
-
 	album, _ := fetchSynoAlbum(baseUrl, cookie, albumCode)
 	randomPhoto, _ := getRandomPhoto(album)
 	photoRequest, _ := getSynoPhotoRequest(baseUrl, cookie, albumCode, randomPhoto.Id)
 	photo, _ := downloadPhoto(*photoRequest)
-
 	convertPhoto(photo, "/tmp/photoframe.jpeg")
 	drawToScreen("/tmp/photoframe.jpeg")
-	log.Printf("Converting and drawing photo %d", randomPhoto.Id)
 }
 
 func convertPhoto(photo []byte, filename string) {
@@ -129,6 +125,8 @@ func max(x, y float32) float32 {
 	return y
 }
 
+// Count seconds till next wake up time. Formatted as clock
+// time in 24H format. E.g. 6, 30 means 6:30 AM.
 func nextWakeup(now time.Time, hour int, minutes int) int {
 	yyyy, mm, dd := now.Date()
 	// Jump to tomorrow, if wakeup time has already passed.
@@ -150,6 +148,9 @@ func drawToScreen(imagePath string) {
 	}
 }
 
+// Suspend device and use real time clock alarm to wake it up.
+// If our wake up time is more or less 24 hours away, we can put it to
+// sleep immediately. Otherwise, we will wait another 30 seconds.
 func suspendToRam(duration int) {
 	if runtime.GOARCH != "arm" {
 		return // Skip if not on Kindle
@@ -180,6 +181,8 @@ func suspendToRam(duration int) {
 	}
 }
 
+// Estabilish TCP connection to Synology NAS and time out after 30 seconds.
+// This enables the Kindle to connect to wifi.
 func waitForWifi(hostname string, port string) error {
 	seconds := 30
 	timeOut := time.Duration(seconds) * time.Second
