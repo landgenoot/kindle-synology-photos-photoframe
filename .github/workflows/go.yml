@@ -24,6 +24,7 @@ jobs:
                 options: -v ${{ github.workspace }}:/workdir
                 run: |
                     cd /workdir
+                    go env -w GO111MODULE=off
                     CGO_LDFLAGS="-Wl,-rpath=/mnt/us/linkss/lib" CC="arm-linux-gnueabi-gcc -fopenmp" PKG_CONFIG_LIBDIR=/usr/lib/arm-linux-gnueabi/pkgconfig GOOS=linux GOARCH=arm CGO_ENABLED=1 go build -o photoframe
                     ls
 
