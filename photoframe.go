@@ -39,8 +39,14 @@ var albumCode string
 func main() {
 	logFile := initLogger()
 	defer logFile.Close()
-	initPowersave()
 
+	if len(os.Args) < 2 {
+		fmt.Println("Error: No album url found.")
+		fmt.Println("Usage: ./photoframe http://192.168.50.57:5000/mo/sharing/RMVJ3g6t8")
+		return
+	}
+
+	initPowersave()
 	shareLink, _ = url.Parse(os.Args[1])
 	baseUrl, albumCode = parseShareLink(shareLink)
 	log.Printf("Initialising album %v on %v", albumCode, shareLink.Hostname())

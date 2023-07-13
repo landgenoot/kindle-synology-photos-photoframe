@@ -47,22 +47,10 @@ func suspendToRam(duration int) {
 }
 
 func initPowersave() {
-	err1 := exec.Command("sh", "-c", "stop framework").Run()
-	if err1 != nil {
-		log.Fatal(err1)
-	}
-	err2 := exec.Command("sh", "-c", "initctl stop webreader >/dev/null 2>&1").Run()
-	if err2 != nil {
-		log.Fatal(err2)
-	}
-	err3 := exec.Command("sh", "-c", "echo powersave >/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor").Run()
-	if err3 != nil {
-		log.Fatal(err3)
-	}
-	err4 := exec.Command("sh", "-c", "lipc-set-prop com.lab126.powerd preventScreenSaver 1").Run()
-	if err4 != nil {
-		log.Fatal(err4)
-	}
+	exec.Command("sh", "-c", "stop framework").Run()
+	exec.Command("sh", "-c", "initctl stop webreader >/dev/null 2>&1").Run()
+	exec.Command("sh", "-c", "echo powersave >/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor").Run()
+	exec.Command("sh", "-c", "lipc-set-prop com.lab126.powerd preventScreenSaver 1").Run()
 }
 
 func getBatteryLevel() string {
