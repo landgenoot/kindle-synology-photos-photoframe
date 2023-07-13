@@ -46,7 +46,7 @@ func suspendToRam(duration int) {
 	}
 }
 
-func enablePowersave() {
+func initPowersave() {
 	err1 := exec.Command("sh", "-c", "stop framework").Run()
 	if err1 != nil {
 		log.Fatal(err1)

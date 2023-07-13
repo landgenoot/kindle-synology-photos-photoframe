@@ -39,7 +39,7 @@ var albumCode string
 func main() {
 	logFile := initLogger()
 	defer logFile.Close()
-	enablePowersave()
+	initPowersave()
 
 	shareLink, _ = url.Parse(os.Args[1])
 	baseUrl, albumCode = parseShareLink(shareLink)
