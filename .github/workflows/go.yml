@@ -33,4 +33,4 @@ jobs:
               name: kindle-synology-photos-photoframe-${{ github.sha }}
               path: |
                 photoframe     
-                assets/*/lib/?.so
+                assets/*/lib/*
