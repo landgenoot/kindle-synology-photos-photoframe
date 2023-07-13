@@ -25,10 +25,9 @@ jobs:
                 run: |
                     cd /workdir
                     CGO_LDFLAGS="-Wl,-rpath=/mnt/us/linkss/lib" CC="arm-linux-gnueabi-gcc -fopenmp" PKG_CONFIG_LIBDIR=/usr/lib/arm-linux-gnueabi/pkgconfig GOOS=linux GOARCH=arm CGO_ENABLED=1 go build -o photoframe -buildvcs=false
-                    ls
+                    mv assets/linkss linkss
 
           - name: Upload release
-            run: mv assets/linkss linkss
             uses: actions/upload-artifact@v3
             with:
               name: kindle-synology-photos-photoframe-${{ github.sha }}
