@@ -39,6 +39,7 @@ var albumCode string
 func main() {
 	logFile := initLogger()
 	defer logFile.Close()
+	enablePowersave()
 
 	shareLink, _ = url.Parse(os.Args[1])
 	baseUrl, albumCode = parseShareLink(shareLink)
@@ -46,6 +47,7 @@ func main() {
 
 	for true {
 		updatePhoto()
+		checkBattery()
 		seconds := nextWakeup(time.Now(), 6, 0)
 		suspendToRam(seconds) // Loop will automatically continue after wake up
 	}
@@ -151,4 +153,16 @@ func waitForWifi(hostname string, port string) error {
 	timeOut := time.Duration(seconds) * time.Second
 	_, err := net.DialTimeout("tcp", hostname+":"+port, timeOut)
 	return err
+}
+
+func checkBattery() {
+	state := getBatteryLevel()
+	level, err := parseBatteryLevel(state)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("Battery level %d %%", level)
+	if level <= 15 {
+		drawLowBatteryIndicator()
+	}
 }

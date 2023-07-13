@@ -10,6 +10,8 @@ import (
 	"time"
 )
 
+var refreshCount = 0
+
 // Suspend device and use real time clock alarm to wake it up.
 // If our wake up time is more or less 24 hours away, we can put it to
 // sleep immediately. Otherwise, we will wait another 30 seconds, which enables us
@@ -44,6 +46,37 @@ func suspendToRam(duration int) {
 	}
 }
 
+func enablePowersave() {
+	err1 := exec.Command("sh", "-c", "stop framework").Run()
+	if err1 != nil {
+		log.Fatal(err1)
+	}
+	err2 := exec.Command("sh", "-c", "initctl stop webreader >/dev/null 2>&1").Run()
+	if err2 != nil {
+		log.Fatal(err2)
+	}
+	err3 := exec.Command("sh", "-c", "echo powersave >/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor").Run()
+	if err3 != nil {
+		log.Fatal(err3)
+	}
+	err4 := exec.Command("sh", "-c", "lipc-set-prop com.lab126.powerd preventScreenSaver 1").Run()
+	if err4 != nil {
+		log.Fatal(err4)
+	}
+}
+
+func getBatteryLevel() string {
+	if runtime.GOARCH != "arm" {
+		return "100%" // Skip if not on Kindle
+	}
+	out, err := exec.Command("/usr/bin/gasgauge-info", "-c").Output()
+	state := string(out)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return state
+}
+
 // Count seconds till next wake up time. Formatted as clock
 // time in 24H format. E.g. 6, 30 means 6:30 AM.
 func nextWakeup(now time.Time, hour int, minutes int) int {
@@ -59,7 +92,23 @@ func drawToScreen(imagePath string) {
 	if runtime.GOARCH != "arm" {
 		return // Skip if not on Kindle
 	}
-	cmd := exec.Command("/usr/sbin/eips", "-f", "-g", imagePath)
+	flags := "-g"
+	if refreshCount%4 == 0 {
+		flags = "-fg" // full refresh after 4 refreshes
+	}
+	err := exec.Command("/usr/sbin/eips", flags, imagePath).Run()
+	if err != nil {
+		log.Fatal(err)
+	}
+	refreshCount++
+}
+
+// Draw a small black box in the left bottom corner of the screen
+func drawLowBatteryIndicator() {
+	if runtime.GOARCH != "arm" {
+		return // Skip if not on Kindle
+	}
+	cmd := exec.Command("/usr/sbin/eips", "-d", "l=0,w=50,h=65")
 	err := cmd.Run()
 	if err != nil {
 		log.Fatal(err)
