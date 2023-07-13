@@ -8,5 +8,12 @@ Read the corresponding blog post [here](https://daanmiddendorp.com/tech/2022/02/
 Tested on a Kindle Voyage. But should also work on other jailbroken Kindles.
 
 
-## Credits
-Built with parts of [pascalw/kindle-dash](https://github.com/pascalw/kindle-dash)
+## Instructions
+
+1. Make sure your Kindle is jailbroken and is reachable over SSH
+2. Download the latest release
+3. Copy `photoframe` binary and `linkss` folder to the internal storage of the kindle `/mnt/us`.
+4. To start `/mnt/us/photoframe http://192.168.50.57:5000/mo/sharing/RMVJ3g6t8 > /dev/null &` (replace url with sharing link to your own album)
+5. To stop `killall photoframe`.
+
+Log files are stored under `/mnt/us/photoframe.log` 
