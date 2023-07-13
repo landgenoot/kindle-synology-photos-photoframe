@@ -28,9 +28,10 @@ jobs:
                     ls
 
           - name: Upload release
+            run: mv assets/linkss linkss
             uses: actions/upload-artifact@v3
             with:
               name: kindle-synology-photos-photoframe-${{ github.sha }}
               path: |
                 photoframe     
-                assets/*/lib/*
+                linkss
