@@ -14,6 +14,6 @@ Tested on a Kindle Voyage. But should also work on other jailbroken Kindles.
 2. Download the [latest release](https://github.com/landgenoot/kindle-synology-photos-photoframe/releases/latest)
 3. Copy `photoframe` binary and `linkss` folder to the internal storage of the kindle (`/mnt/us`).
 4. To start `./photoframe http://192.168.50.57:5000/mo/sharing/RMVJ3g6t8 > /dev/null &` (replace url with sharing link to your own album)
-5. To stop `killall photoframe`.
+5. To stop `killall photoframe`. You will have 30 seconds to stop it after you woke up the device manually by pressing the power button.
 
 Log files are stored under `/mnt/us/photoframe.log` 
