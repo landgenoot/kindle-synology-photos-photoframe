@@ -10,8 +10,6 @@ import (
 	"time"
 )
 
-var refreshCount = 0
-
 // Suspend device and use real time clock alarm to wake it up.
 // If our wake up time is more or less 24 hours away, we can put it to
 // sleep immediately. Otherwise, we will wait another 30 seconds, which enables us
@@ -31,11 +29,15 @@ func suspendToRam(duration int) {
 		log.Fatal(err2)
 	}
 
-	// Check if we are waken up manually, give us time to abort the process
+	// Delay sleep process otherwise it gets suspended during rendering.
+	sleepDelay := 1
+	// If sleep time < 24hrs, the button has been pressed, so give extra time to abort the process.
 	if duration < 3600*24-60 {
-		log.Println("Waiting 30 seconds before going back to sleep")
-		time.Sleep(30 * time.Second)
+		sleepDelay = 30
 	}
+
+	log.Printf("Waiting %d seconds before going back to sleep", sleepDelay)
+	time.Sleep(time.Duration(sleepDelay) * time.Second)
 
 	log.Println("Suspending to RAM")
 
@@ -80,15 +82,10 @@ func drawToScreen(imagePath string) {
 	if runtime.GOARCH != "arm" {
 		return // Skip if not on Kindle
 	}
-	flags := "-g"
-	if refreshCount%4 == 0 {
-		flags = "-fg" // full refresh after 4 refreshes
-	}
-	err := exec.Command("/usr/sbin/eips", flags, imagePath).Run()
+	err := exec.Command("/usr/sbin/eips", "-fg", imagePath).Run()
 	if err != nil {
 		log.Fatal(err)
 	}
-	refreshCount++
 }
 
 // Draw a small black box in the left bottom corner of the screen
