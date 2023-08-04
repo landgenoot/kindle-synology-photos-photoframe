@@ -1,6 +1,6 @@
 # kindle-synology-photos-photoframe
 Pick a random photo from a shared album in Synology Photos and show it on a jailbroken Kindle every morning.
-All processing happens on the device using Golang and Imagemagick.
+All processing happens on the device using 100% Golang.
 
 Read the corresponding blog post [here](https://daanmiddendorp.com/tech/2022/02/14/new-destination-for-my-broken-kindle)
 
