@@ -52,6 +52,7 @@ func main() {
 	log.Printf("Initialising album %v on %v", albumCode, shareLink.Hostname())
 
 	for true {
+		reconfigureWifi()
 		updatePhoto()
 		checkBattery()
 		seconds := nextWakeup(time.Now(), 6, 0)
