@@ -88,6 +88,16 @@ func drawToScreen(imagePath string) {
 	}
 }
 
+func reconfigureWifi() {
+	if runtime.GOARCH != "arm" {
+		return // Skip if not on Kindle
+	}
+	err := exec.Command("/usr/bin/wpa_cli", "reconfigure").Run()
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
 // Draw a small black box in the left bottom corner of the screen
 func drawLowBatteryIndicator() {
 	if runtime.GOARCH != "arm" {
