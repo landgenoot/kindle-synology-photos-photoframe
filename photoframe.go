@@ -1,4 +1,23 @@
-// Kindle Photoframe - Dual Mode (Synology NAS or Local Folder)
+// Kindle Photoframe - Synology NAS & Local Folder Support
+//
+// This application displays a random photo on a Kindle device.
+// It supports two modes:
+//   1. Synology NAS Album (public sharing link)
+//   2. Local folder with JPEG/PNG images
+//
+// To start with Synology album:
+//   ./photoframe http://192.168.50.57:5000/mo/sharing/RMVJ3g6t8
+//
+// To start with local photo folder:
+//   ./photoframe /path/to/your/photos
+//
+// To stop:
+//   killall photoframe
+//
+// Notes for Synology mode:
+// - Go to Synology Photos -> Select album -> Share
+// - Ensure Privacy Settings are set to:
+//     "Public - Anyone with the link can view"
 package main
 
 // #cgo pkg-config: MagickWand
