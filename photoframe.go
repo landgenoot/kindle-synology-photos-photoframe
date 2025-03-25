@@ -1,11 +1,4 @@
-// Kindle Synology Photos Photoframe
-//
-// To start: ./photoframe http://192.168.50.57:5000/mo/sharing/RMVJ3g6t8
-// To stop: killall photoframe
-//
-// URL can be obtained from:
-// Synology Photos -> Pick album -> Sharing
-// Privacy Settings must be "Public - Anyone with the link can view"
+// Kindle Photoframe - Dual Mode (Synology NAS or Local Folder)
 package main
 
 // #cgo pkg-config: MagickWand
@@ -23,6 +16,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"strings"
 	"time"
 	"unsafe"
 
@@ -35,27 +29,41 @@ var shareLink *url.URL
 var cookie *http.Cookie
 var baseUrl string
 var albumCode string
+var isLocal bool
+var localPath string
 
 func main() {
 	logFile := initLogger()
 	defer logFile.Close()
 
 	if len(os.Args) < 2 {
-		fmt.Println("Error: No album url found.")
-		fmt.Println("Usage: ./photoframe http://192.168.50.57:5000/mo/sharing/RMVJ3g6t8")
+		fmt.Println("Error: No photo source provided.")
+		fmt.Println("Usage for Synology: ./photoframe http://<ip>:<port>/mo/sharing/XYZ123")
+		fmt.Println("Usage for Local:     ./photoframe /path/to/photo/folder")
 		return
 	}
 
 	initPowersave()
-	shareLink, _ = url.Parse(os.Args[1])
-	baseUrl, albumCode = parseShareLink(shareLink)
-	log.Printf("Initialising album %v on %v", albumCode, shareLink.Hostname())
 
-	for true {
+	arg := os.Args[1]
+	if strings.HasPrefix(arg, "http://") || strings.HasPrefix(arg, "https://") {
+		// Synology NAS mode
+		isLocal = false
+		shareLink, _ = url.Parse(arg)
+		baseUrl, albumCode = parseShareLink(shareLink)
+		log.Printf("Running in Synology NAS mode. Album %v on %v", albumCode, shareLink.Hostname())
+	} else {
+		// Local folder mode
+		isLocal = true
+		localPath = arg
+		log.Printf("Running in LOCAL mode. Folder: %s", localPath)
+	}
+
+	for {
 		updatePhoto()
 		checkBattery()
 		seconds := nextWakeup(time.Now(), 6, 0)
-		suspendToRam(seconds) // Loop will automatically continue after wake up
+		suspendToRam(seconds)
 	}
 }
 
@@ -69,30 +77,66 @@ func initLogger() *os.File {
 }
 
 func updatePhoto() {
-	connectionErr := waitForWifi(shareLink.Hostname(), shareLink.Port())
-	if connectionErr != nil {
-		log.Printf("Could not connect to server, connectionError = %v", connectionErr)
-		return
+	var photo []byte
+	var err error
+
+	if isLocal {
+		photo, err = getRandomLocalPhoto(localPath)
+		if err != nil {
+			log.Printf("Could not load local photo: %v", err)
+			return
+		}
+		log.Printf("Displaying random local photo")
+	} else {
+		connectionErr := waitForWifi(shareLink.Hostname(), shareLink.Port())
+		if connectionErr != nil {
+			log.Printf("Could not connect to NAS server: %v", connectionErr)
+			return
+		}
+		cookie, _ = getSharingSidCookie(shareLink)
+		album, _ := fetchSynoAlbum(baseUrl, cookie, albumCode)
+		randomPhoto, _ := getRandomPhoto(album)
+		photoRequest, _ := getSynoPhotoRequest(baseUrl, cookie, albumCode, randomPhoto.Id)
+		photo, _ = downloadPhoto(*photoRequest)
+		log.Printf("Updating to Synology NAS photo %v", randomPhoto.Id)
 	}
-	cookie, _ = getSharingSidCookie(shareLink)
-	album, _ := fetchSynoAlbum(baseUrl, cookie, albumCode)
-	randomPhoto, _ := getRandomPhoto(album)
-	photoRequest, _ := getSynoPhotoRequest(baseUrl, cookie, albumCode, randomPhoto.Id)
-	photo, _ := downloadPhoto(*photoRequest)
+
 	convertPhoto(photo, "/tmp/photoframe.jpeg")
 	drawToScreen("/tmp/photoframe.jpeg")
-	log.Printf("Updating to photo %v", randomPhoto.Id)
+}
+
+func getRandomLocalPhoto(folderPath string) ([]byte, error) {
+	files, err := ioutil.ReadDir(folderPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var imageFiles []string
+	for _, file := range files {
+		if !file.IsDir() {
+			ext := strings.ToLower(path.Ext(file.Name()))
+			switch ext {
+			case ".jpg", ".jpeg", ".png":
+				imageFiles = append(imageFiles, path.Join(folderPath, file.Name()))
+			}
+		}
+	}
+
+	if len(imageFiles) == 0 {
+		return nil, errors.New("no image files found in folder")
+	}
+
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	randomIndex := r.Intn(len(imageFiles))
+	return os.ReadFile(imageFiles[randomIndex])
 }
 
 func convertPhoto(photo []byte, filename string) {
 	C.MagickWandGenesis()
-
-	// Create a wand
 	mwPhoto := C.NewMagickWand()
 	mwKindleColors := C.NewMagickWand()
 	pixelWand := C.NewPixelWand()
 
-	// Tidy up wands after function run
 	defer func() {
 		if mwPhoto != nil {
 			C.DestroyMagickWand(mwPhoto)
@@ -102,32 +146,29 @@ func convertPhoto(photo []byte, filename string) {
 		C.MagickWandTerminus()
 	}()
 
-	// Read photo and Kindle Colors reference file
 	C.MagickReadImageBlob(mwPhoto, unsafe.Pointer(&photo[0]), C.size_t(len(photo)))
 	C.MagickReadImageBlob(mwKindleColors, unsafe.Pointer(&kindle_colors[0]), C.size_t(len(kindle_colors)))
 
-	// Crop and resize, rotate
 	C.MagickSetImageGravity(mwPhoto, C.CenterGravity)
 	mwPhoto = C.MagickTransformImage(mwPhoto, C.CString("1448x1072+0+0"), C.CString(""))
 	C.MagickRotateImage(mwPhoto, pixelWand, 90)
 
-	// Convert to grayscale and apply dithering
 	C.MagickTransformImageColorspace(mwPhoto, C.GRAYColorspace)
 	C.MagickRemapImage(mwPhoto, mwKindleColors, C.FloydSteinbergDitherMethod)
 	C.MagickSetImageCompressionQuality(mwPhoto, C.size_t(75))
 
-	// Adjust brightness and color depth
 	image := C.GetImageFromMagickWand(mwPhoto)
 	C.BrightnessContrastImage(image, 3, 15)
 	C.SetImageDepth(image, C.size_t(8))
 
-	// Write the new image
-	C.MagickWriteImage(mwPhoto, C.CString(*&filename))
+	C.MagickWriteImage(mwPhoto, C.CString(filename))
 }
+
+// -------- Synology photo-related functions (kept unchanged for compatibility) --------
 
 func getRandomPhoto(album synoFotoBrowseItem) (Photo, error) {
 	if len(album.Data.List) < 1 {
-		return Photo{}, errors.New("No photos in album")
+		return Photo{}, errors.New("no photos in album")
 	}
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	randomIndex := r.Intn(len(album.Data.List))
@@ -145,21 +186,13 @@ func downloadPhoto(req http.Request) ([]byte, error) {
 	return ioutil.ReadAll(res.Body)
 }
 
-func max(x, y float32) float32 {
-	if x > y {
-		return x
-	}
-	return y
-}
-
-// Estabilish TCP connection to Synology NAS and time out after 30 seconds.
-// This enables the Kindle to connect to wifi.
 func waitForWifi(hostname string, port string) error {
-	seconds := 30
-	timeOut := time.Duration(seconds) * time.Second
-	_, err := net.DialTimeout("tcp", hostname+":"+port, timeOut)
+	timeout := 30 * time.Second
+	_, err := net.DialTimeout("tcp", hostname+":"+port, timeout)
 	return err
 }
+
+// -------- Battery check --------
 
 func checkBattery() {
 	state := getBatteryLevel()
